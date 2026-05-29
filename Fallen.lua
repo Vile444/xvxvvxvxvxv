@@ -325,11 +325,27 @@ UI.AddTab("Fallen", function(tab)
 		eventSec:ColorPicker(config.colorKey, config.r, config.g, config.b, 1)
 	end
 
-	local extraSec = tab:Section("Staff Alerts / Settings", "Right", nil, 220)
+	local extraSec = tab:Section("Staff Alerts / Settings", "Right", nil, 420)
 	extraSec:Toggle("act_mod_alert", "Active Mod Alert", true)
 	extraSec:Text("Credit to code.leak for the mod list")
-	extraSec:SliderInt("script_text_size", "Text Size", 10, 32, 16)
+	extraSec:Spacing()
+	
+	extraSec:Text("Performance Settings")
+	
+	extraSec:Text("Target Script FPS: Caps how fast ESP text updates on screen.")
 	extraSec:SliderInt("script_fps_target", "Script Fps", 30, 240, 60)
+	extraSec:Spacing()
+	
+	extraSec:Text("Load Speed: How many objects are scanned per tick.")
+	extraSec:Text("Turn down if script freezes while walking around or the script crashes.")
+	extraSec:SliderInt("esp_load_speed", "ESP Load Speed", 1, 50, 10)
+	extraSec:Spacing()
+	
+	extraSec:Text("Respawn Delay: Seconds to wait after you respawn.")
+	extraSec:SliderInt("respawn_delay", "Respawn Delay (Seconds)", 1, 5, 2)
+	
+	extraSec:Spacing()
+	extraSec:SliderInt("script_text_size", "Text Size", 10, 32, 13)
 end)
 
 local drawings = {}
@@ -363,6 +379,18 @@ local function wipeResourceClass(targetClass)
 	end
 end
 
+local function wipeAllDrawings()
+    for key, data in pairs(drawings) do
+        pcall(function() 
+            if data.text then
+                data.text.Visible = false
+                data.text:Remove()
+            end
+        end)
+    end
+    table.clear(drawings)
+end
+
 local function isLocationActive(locName)
 	if UI.GetValue("loc_all") then return true end
 	local safeKey = "loc_filter_" .. locName:gsub(" ", "")
@@ -370,8 +398,31 @@ local function isLocationActive(locName)
 end
 
 task.spawn(function()
-	while true do
+	local lp = Players.LocalPlayer
+    local wasDead = false
+	
+    while true do
 		task.wait(4.0)
+
+		local batchSize = math.max(1, UI.GetValue("esp_load_speed") or 10)
+
+		local character = lp.Character
+		local locHum = character and character:FindFirstChildWhichIsA("Humanoid")
+		
+        if not character or not locHum or locHum.Health <= 0 then
+            if not wasDead then
+                wasDead = true
+                wipeAllDrawings()
+            end
+			task.wait(1.0)
+			continue
+		end
+        
+        if wasDead then
+            local delayTime = UI.GetValue("respawn_delay") or 3
+            task.wait(delayTime)
+            wasDead = false
+        end
 		
 		local nMaster = UI.GetValue("node_enabled") or false
 		local pMaster = UI.GetValue("plant_enabled") or false
@@ -421,9 +472,13 @@ task.spawn(function()
 			end
 		end
 		
+		task.wait(0.07)
+		
 		if nMaster and nodesFolder then
 			pcall(function()
-				for _, child in ipairs(nodesFolder:GetChildren()) do
+				local children = nodesFolder:GetChildren()
+				for i, child in ipairs(children) do
+					if i % batchSize == 0 then task.wait() end
 					local config = nodeConfig[child.Name]
 					if config and UI.GetValue(config.toggleKey) ~= false then
 						local mainPart = child:FindFirstChild("Main") or child:FindFirstChildWhichIsA("BasePart")
@@ -436,12 +491,15 @@ task.spawn(function()
 					end
 				end
 			end)
-			task.wait(0.05)
 		end
+		
+		task.wait(0.07)
 		
 		if pMaster and plantsFolder then
 			pcall(function()
-				for _, child in ipairs(plantsFolder:GetChildren()) do
+				local children = plantsFolder:GetChildren()
+				for i, child in ipairs(children) do
+					if i % batchSize == 0 then task.wait() end
 					local config = plantConfig[child.Name]
 					if config and UI.GetValue(config.toggleKey) ~= false then
 						local mainPart = child:FindFirstChild("Main")
@@ -454,12 +512,15 @@ task.spawn(function()
 					end
 				end
 			end)
-			task.wait(0.05)
 		end
+
+		task.wait(0.07)
 
 		if lonersFolder then
 			pcall(function()
-				for _, child in ipairs(lonersFolder:GetChildren()) do
+				local children = lonersFolder:GetChildren()
+				for i, child in ipairs(children) do
+					if i % batchSize == 0 then task.wait() end
 					local name = child.Name
 					local isCrateTracked = crateConfig[name] and UI.GetValue(crateConfig[name].toggleKey) ~= false
 					local isExtraTracked = extraPageConfig[name] and UI.GetValue(extraPageConfig[name].toggleKey) ~= false
@@ -506,12 +567,15 @@ task.spawn(function()
 					end
 				end
 			end)
-			task.wait(0.05)
 		end
+
+		task.wait(0.07)
 
 		if dMaster and dropsFolder then
 			pcall(function()
-				for _, child in ipairs(dropsFolder:GetChildren()) do
+				local children = dropsFolder:GetChildren()
+				for i, child in ipairs(children) do
+					if i % batchSize == 0 then task.wait() end
 					local targetPart = child:FindFirstChild("Main") or child:FindFirstChildWhichIsA("BasePart") or (child:IsA("BasePart") and child)
 					local pivotFallbackPos = nil
 					if not targetPart and child:IsA("Model") then
@@ -527,12 +591,15 @@ task.spawn(function()
 					end
 				end
 			end)
-			task.wait(0.05)
 		end
+
+		task.wait(0.07)
 
 		if aMaster and animalsFolder then
 			pcall(function()
-				for _, child in ipairs(animalsFolder:GetChildren()) do
+				local children = animalsFolder:GetChildren()
+				for i, child in ipairs(children) do
+					if i % batchSize == 0 then task.wait() end
 					local config = animalConfig[child.Name]
 					if config and UI.GetValue(config.toggleKey) ~= false then
 						local detail = child:FindFirstChild("Detail")
@@ -548,8 +615,9 @@ task.spawn(function()
 					end
 				end
 			end)
-			task.wait(0.05)
 		end
+
+		task.wait(0.07)
 
 		if npcMaster and miltaryFolder then
 			pcall(function()
@@ -557,7 +625,9 @@ task.spawn(function()
 					if isLocationActive(locName) then
 						local locObj = miltaryFolder:FindFirstChild(locName)
 						if locObj then
-							for _, object in ipairs(locObj:GetChildren()) do
+							local children = locObj:GetChildren()
+							for i, object in ipairs(children) do
+								if i % batchSize == 0 then task.wait() end
 								if object.Name == "Soldier" then
 									local headPart = object:FindFirstChild("Head") or object:FindFirstChild("HumanoidRootPart") or object:FindFirstChildWhichIsA("BasePart")
 									local humanoid = object:FindFirstChildWhichIsA("Humanoid")
@@ -582,8 +652,9 @@ task.spawn(function()
 					end
 				end
 			end)
-			task.wait(0.05)
 		end
+
+		task.wait(0.07)
 
 		if eventMaster then
 			pcall(function()
@@ -645,14 +716,15 @@ end)
 
 task.spawn(function()
 	while true do
-		task.wait(0.5)
+		task.wait(1.0)
+        local batchSize = math.max(1, UI.GetValue("esp_load_speed") or 10)
 		
 		if UI.GetValue("act_mod_alert") == true then
 			local namesFound = {}
 			local seen = {}
 			
-			for _, p in ipairs(Players:GetPlayers()) do
-				pcall(function()
+			pcall(function()
+				for _, p in ipairs(Players:GetPlayers()) do
 					local matched = false
 					local pId = tonumber(p.UserId) or 0
 					
@@ -670,11 +742,13 @@ task.spawn(function()
 						seen[p.Name] = true
 						table.insert(namesFound, p.Name)
 					end
-				end)
-			end
-			
+				end
+			end)
+
 			pcall(function()
-				for _, obj in ipairs(workspace:GetChildren()) do
+				local wsChildren = workspace:GetChildren()
+				for i, obj in ipairs(wsChildren) do
+					if i % batchSize == 0 then task.wait() end
 					if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(obj) then
 						if moderatorNames[obj.Name] and not seen[obj.Name] then
 							seen[obj.Name] = true
@@ -714,294 +788,292 @@ end)
 local lastRenderTime = 0
 
 RunService.RenderStepped:Connect(function()
-	local targetFPS = UI.GetValue("script_fps_target") or 60
-	local frameBudget = 1 / targetFPS
-	local currentTime = os.clock()
-	
-	if (currentTime - lastRenderTime) < frameBudget then
-		return
-	end
-	lastRenderTime = currentTime
-
-	local globalTextSize = UI.GetValue("script_text_size") or 16
-
-	local nMaster = UI.GetValue("node_enabled") or false
-	local nName   = UI.GetValue("node_name") or false
-	local nDist   = UI.GetValue("node_distance") or false
-	local nMaxC   = UI.GetValue("node_max_count") or 50
-	local nMaxD   = UI.GetValue("node_max_dist") or 300
-	
-	local pMaster = UI.GetValue("plant_enabled") or false
-	local pName   = UI.GetValue("plant_name") or false
-	local pDist   = UI.GetValue("plant_distance") or false
-	local pMaxC   = UI.GetValue("plant_max_count") or 50
-	local pMaxD   = UI.GetValue("plant_max_dist") or 300
-
-	local cMaster = UI.GetValue("crate_enabled") or false
-	local cName   = UI.GetValue("crate_name") or false
-	local cDist   = UI.GetValue("crate_distance") or false
-	local cMaxC   = UI.GetValue("crate_max_count") or 50
-	local cMaxD   = UI.GetValue("crate_max_dist") or 300
-
-	local dMaster = UI.GetValue("drop_enabled") or false
-	local dName   = UI.GetValue("drop_name") or false
-	local dDist   = UI.GetValue("drop_distance") or false
-	local dMaxC   = UI.GetValue("drop_max_count") or 40
-	local dMaxD   = UI.GetValue("drop_max_dist") or 250
-
-	local eMaster = UI.GetValue("extra_enabled") or false
-	local eName   = UI.GetValue("extra_name") or false
-	local eDist   = UI.GetValue("extra_distance") or false
-	local eMaxC   = UI.GetValue("extra_max_count") or 50
-	local eMaxD   = UI.GetValue("extra_max_dist") or 300
-
-	local aMaster = UI.GetValue("animal_enabled") or false
-	local aName   = UI.GetValue("animal_name") or false
-	local aHealth = UI.GetValue("animal_health") or false
-	local aDist   = UI.GetValue("animal_distance") or false
-	local aMaxD   = UI.GetValue("animal_max_dist") or 250
-
-	local npcMaster = UI.GetValue("npc_enabled") or false
-	local npcName   = UI.GetValue("npc_name") or false
-	local npcHealth = UI.GetValue("npc_health") or false
-	local npcDist   = UI.GetValue("npc_distance") or false
-	local npcMaxD   = UI.GetValue("npc_max_dist") or 1500
-
-	local eventMaster = UI.GetValue("event_enabled") or false
-	local eventName   = UI.GetValue("event_name") or false
-	local eventHealth = UI.GetValue("event_health") or false
-	local eventDist   = UI.GetValue("event_distance") or false
-	local eventMaxD   = UI.GetValue("event_max_dist") or 2500
-	
-	local lp = Players.LocalPlayer
-	local character = lp and lp.Character
-	local hrp = character and character:FindFirstChild("HumanoidRootPart")
-	
-	if not hrp then 
-		for _, data in pairs(drawings) do
-			if data.text then data.text.Visible = false end
+	local mainSuccess = pcall(function()
+		local targetFPS = UI.GetValue("script_fps_target") or 60
+		local frameBudget = 1 / targetFPS
+		local currentTime = os.clock()
+		
+		if (currentTime - lastRenderTime) < frameBudget then
+			return
 		end
-		return 
-	end
-	
-	local hrpPos = hrp.Position
-	
-	local nodeRenderList   = {}
-	local plantRenderList  = {}
-	local crateRenderList  = {}
-	local dropRenderList   = {}
-	local extraRenderList  = {}
-	
-	for key, data in pairs(drawings) do
-		if not data.text then continue end
-		data.text.Size = globalTextSize
+		lastRenderTime = currentTime
+
+		local lp = Players.LocalPlayer
+		local character = lp and lp.Character
+		local localHumanoid = character and character:FindFirstChildWhichIsA("Humanoid")
+		local hrp = character and character:FindFirstChild("HumanoidRootPart")
+
+		if not hrp or not localHumanoid or localHumanoid.Health <= 0 then 
+			return 
+		end
 		
-		if data.resourceClass == "Node" and not nMaster then data.text.Visible = false continue end
-		if data.resourceClass == "Plant" and not pMaster then data.text.Visible = false continue end
-		if data.resourceClass == "Crate" and not cMaster then data.text.Visible = false continue end
-		if data.resourceClass == "Drop" and not dMaster then data.text.Visible = false continue end
-		if data.resourceClass == "Extra" and not eMaster then data.text.Visible = false continue end
-		if data.resourceClass == "Animal" and not aMaster then data.text.Visible = false continue end
-		if data.resourceClass == "NPC" and not npcMaster then data.text.Visible = false continue end
-		if data.resourceClass == "Event" and not eventMaster then data.text.Visible = false continue end
+		local hrpPos = hrp.Position
+		local globalTextSize = UI.GetValue("script_text_size") or 16
+
+		local nMaster = UI.GetValue("node_enabled") or false
+		local nName   = UI.GetValue("node_name") or false
+		local nDist   = UI.GetValue("node_distance") or false
+		local nMaxC   = UI.GetValue("node_max_count") or 50
+		local nMaxD   = UI.GetValue("node_max_dist") or 300
 		
-		if data.resourceClass == "NPC" then
-			if not isLocationActive(data.location) then
+		local pMaster = UI.GetValue("plant_enabled") or false
+		local pName   = UI.GetValue("plant_name") or false
+		local pDist   = UI.GetValue("plant_distance") or false
+		local pMaxC   = UI.GetValue("plant_max_count") or 50
+		local pMaxD   = UI.GetValue("plant_max_dist") or 300
+
+		local cMaster = UI.GetValue("crate_enabled") or false
+		local cName   = UI.GetValue("crate_name") or false
+		local cDist   = UI.GetValue("crate_distance") or false
+		local cMaxC   = UI.GetValue("crate_max_count") or 50
+		local cMaxD   = UI.GetValue("crate_max_dist") or 300
+
+		local dMaster = UI.GetValue("drop_enabled") or false
+		local dName   = UI.GetValue("drop_name") or false
+		local dDist   = UI.GetValue("drop_distance") or false
+		local dMaxC   = UI.GetValue("drop_max_count") or 40
+		local dMaxD   = UI.GetValue("drop_max_dist") or 250
+
+		local eMaster = UI.GetValue("extra_enabled") or false
+		local eName   = UI.GetValue("extra_name") or false
+		local eDist   = UI.GetValue("extra_distance") or false
+		local eMaxC   = UI.GetValue("extra_max_count") or 50
+		local eMaxD   = UI.GetValue("extra_max_dist") or 300
+
+		local aMaster = UI.GetValue("animal_enabled") or false
+		local aName   = UI.GetValue("animal_name") or false
+		local aHealth = UI.GetValue("animal_health") or false
+		local aDist   = UI.GetValue("animal_distance") or false
+		local aMaxD   = UI.GetValue("animal_max_dist") or 250
+
+		local npcMaster = UI.GetValue("npc_enabled") or false
+		local npcName   = UI.GetValue("npc_name") or false
+		local npcHealth = UI.GetValue("npc_health") or false
+		local npcDist   = UI.GetValue("npc_distance") or false
+		local npcMaxD   = UI.GetValue("npc_max_dist") or 1500
+
+		local eventMaster = UI.GetValue("event_enabled") or false
+		local eventName   = UI.GetValue("event_name") or false
+		local eventHealth = UI.GetValue("event_health") or false
+		local eventDist   = UI.GetValue("event_distance") or false
+		local eventMaxD   = UI.GetValue("event_max_dist") or 2500
+		
+		local nodeRenderList   = {}
+		local plantRenderList  = {}
+		local crateRenderList  = {}
+		local dropRenderList   = {}
+		local extraRenderList  = {}
+		
+		for key, data in pairs(drawings) do
+			if not data.text then continue end
+			data.text.Size = globalTextSize
+			
+			if data.resourceClass == "Node" and not nMaster then data.text.Visible = false continue end
+			if data.resourceClass == "Plant" and not pMaster then data.text.Visible = false continue end
+			if data.resourceClass == "Crate" and not cMaster then data.text.Visible = false continue end
+			if data.resourceClass == "Drop" and not dMaster then data.text.Visible = false continue end
+			if data.resourceClass == "Extra" and not eMaster then data.text.Visible = false continue end
+			if data.resourceClass == "Animal" and not aMaster then data.text.Visible = false continue end
+			if data.resourceClass == "NPC" and not npcMaster then data.text.Visible = false continue end
+			if data.resourceClass == "Event" and not eventMaster then data.text.Visible = false continue end
+			
+			if data.resourceClass == "NPC" then
+				if not isLocationActive(data.location) then
+					data.text.Visible = false
+					continue
+				end
+			end
+
+			if data.modelInstance and not data.modelInstance.Parent then 
+				data.text.Visible = false 
+				continue 
+			elseif data.mainPart and not data.mainPart.Parent then 
+				data.text.Visible = false 
+				continue 
+			elseif not data.mainPart and not data.modelInstance and not data.optionalPivotPos then
 				data.text.Visible = false
 				continue
 			end
-		end
 
-		if data.modelInstance and not data.modelInstance.Parent then 
-			data.text.Visible = false 
-			continue 
-		elseif data.mainPart and not data.mainPart.Parent then 
-			data.text.Visible = false 
-			continue 
-		elseif not data.mainPart and not data.modelInstance and not data.optionalPivotPos then
-			data.text.Visible = false
-			continue
-		end
-
-		local hPos = data.mainPart and data.mainPart.Position or data.optionalPivotPos
-		
-		if hPos then
-			local studsDist = (hPos - hrpPos).Magnitude
-			local realMeters = studsDist * 0.28
+			local hPos = data.mainPart and data.mainPart.Position or data.optionalPivotPos
 			
-			if data.resourceClass == "Node" then
-				if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= nMaxD then
-					table.insert(nodeRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = nName, distOpt = nDist })
-				else data.text.Visible = false end
+			if hPos then
+				local studsDist = (hPos - hrpPos).Magnitude
+				local realMeters = studsDist * 0.28
 				
-			elseif data.resourceClass == "Plant" then
-				if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= pMaxD then
-					table.insert(plantRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = pName, distOpt = pDist })
-				else data.text.Visible = false end
-
-			elseif data.resourceClass == "Crate" then
-				if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= cMaxD then
-					table.insert(crateRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = cName, distOpt = cDist })
-				else data.text.Visible = false end
-
-			elseif data.resourceClass == "Drop" then
-				if realMeters <= dMaxD then
-					table.insert(dropRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = dName, distOpt = dDist })
-				else data.text.Visible = false end
-
-			elseif data.resourceClass == "Extra" then
-				if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= eMaxD then
-					table.insert(extraRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = eName, distOpt = eDist })
-				else data.text.Visible = false end
-
-			elseif data.resourceClass == "Animal" then
-				if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= aMaxD then
-					local pos, onScreen = WorldToScreen(hPos + Vector3.new(0, 4, 0))
-					
-					if onScreen and pos then
-						local elements = {}
-						if aName then table.insert(elements, data.config.label) end
-						if aHealth then table.insert(elements, string.format("(%d HP)", math.floor((data.humanoid and data.humanoid.Parent) and data.humanoid.Health or 100))) end
-						if aDist then table.insert(elements, string.format("[%dm]", math.floor(realMeters))) end
-						
-						local str = table.concat(elements, " ")
-						if str == "" then data.text.Visible = false else
-							data.text.Text = str
-							data.text.Color = getLiveColor(data.config.colorKey, data.config.r, data.config.g, data.config.b)
-							data.text.Position = Vector2.new(pos.X, pos.Y - 10)
-							data.text.Visible = true
-						end
+				if data.resourceClass == "Node" then
+					if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= nMaxD then
+						table.insert(nodeRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = nName, distOpt = nDist })
 					else data.text.Visible = false end
-				else data.text.Visible = false end
-
-			elseif data.resourceClass == "NPC" then
-				if realMeters <= npcMaxD then
-					local pos, onScreen = WorldToScreen(hPos + Vector3.new(0, 1.5, 0))
 					
-					if onScreen and pos then
-						local elements = {}
-						if npcName then table.insert(elements, "Soldier") end
-						if npcHealth then table.insert(elements, string.format("(%d HP)", math.floor((data.humanoid and data.humanoid.Parent) and data.humanoid.Health or 100))) end
-						if npcDist then table.insert(elements, string.format("[%dm]", math.floor(realMeters))) end
-						
-						local str = table.concat(elements, " ")
-						if str == "" then data.text.Visible = false else
-							data.text.Text = str
-							data.text.Color = getLiveColor("col_npc_esp", 1, 0.2, 0.2)
-							data.text.Position = Vector2.new(pos.X, pos.Y)
-							data.text.Visible = true
-						end
+				elseif data.resourceClass == "Plant" then
+					if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= pMaxD then
+						table.insert(plantRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = pName, distOpt = pDist })
 					else data.text.Visible = false end
-				else data.text.Visible = false end
 
-			elseif data.resourceClass == "Event" then
-				if realMeters <= eventMaxD and data.config and UI.GetValue(data.config.toggleKey) ~= false then
-					local heightOffset = (data.typeName == "BTR") and Vector3.new(0, 5, 0) or Vector3.new(0, 1.5, 0)
-					local pos, onScreen = WorldToScreen(hPos + heightOffset)
-					
-					if onScreen and pos then
-						local elements = {}
-						if eventName then table.insert(elements, data.typeName) end
-						if eventHealth then table.insert(elements, string.format("(%d HP)", math.floor((data.humanoid and data.humanoid.Parent) and data.humanoid.Health or 100))) end
-						if eventDist then table.insert(elements, string.format("[%dm]", math.floor(realMeters))) end
-						
-						local str = table.concat(elements, " ")
-						if str == "" then data.text.Visible = false else
-							data.text.Text = str
-							data.text.Color = getLiveColor(data.config.colorKey, data.config.r, data.config.g, data.config.b)
-							data.text.Position = Vector2.new(pos.X, pos.Y)
-							data.text.Visible = true
-						end
+				elseif data.resourceClass == "Crate" then
+					if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= cMaxD then
+						table.insert(crateRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = cName, distOpt = cDist })
 					else data.text.Visible = false end
-				else data.text.Visible = false end
+
+				elseif data.resourceClass == "Drop" then
+					if realMeters <= dMaxD then
+						table.insert(dropRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = dName, distOpt = dDist })
+					else data.text.Visible = false end
+
+				elseif data.resourceClass == "Extra" then
+					if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= eMaxD then
+						table.insert(extraRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = eName, distOpt = eDist })
+					else data.text.Visible = false end
+
+				elseif data.resourceClass == "Animal" then
+					if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= aMaxD then
+						local pos, onScreen = WorldToScreen(hPos + Vector3.new(0, 4, 0))
+						
+						if onScreen and pos then
+							local elements = {}
+							if aName then table.insert(elements, data.config.label) end
+							if aHealth then table.insert(elements, string.format("(%d HP)", math.floor((data.humanoid and data.humanoid.Parent) and data.humanoid.Health or 100))) end
+							if aDist then table.insert(elements, string.format("[%dm]", math.floor(realMeters))) end
+							
+							local str = table.concat(elements, " ")
+							if str == "" then data.text.Visible = false else
+								data.text.Text = str
+								data.text.Color = getLiveColor(data.config.colorKey, data.config.r, data.config.g, data.config.b)
+								data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+								data.text.Visible = true
+							end
+						else data.text.Visible = false end
+					else data.text.Visible = false end
+
+				elseif data.resourceClass == "NPC" then
+					if realMeters <= npcMaxD then
+						local pos, onScreen = WorldToScreen(hPos + Vector3.new(0, 1.5, 0))
+						
+						if onScreen and pos then
+							local elements = {}
+							if npcName then table.insert(elements, "Soldier") end
+							if npcHealth then table.insert(elements, string.format("(%d HP)", math.floor((data.humanoid and data.humanoid.Parent) and data.humanoid.Health or 100))) end
+							if npcDist then table.insert(elements, string.format("[%dm]", math.floor(realMeters))) end
+							
+							local str = table.concat(elements, " ")
+							if str == "" then data.text.Visible = false else
+								data.text.Text = str
+								data.text.Color = getLiveColor("col_npc_esp", 1, 0.2, 0.2)
+								data.text.Position = Vector2.new(pos.X, pos.Y)
+								data.text.Visible = true
+							end
+						else data.text.Visible = false end
+					else data.text.Visible = false end
+
+				elseif data.resourceClass == "Event" then
+					if realMeters <= eventMaxD and data.config and UI.GetValue(data.config.toggleKey) ~= false then
+						local heightOffset = (data.typeName == "BTR") and Vector3.new(0, 5, 0) or Vector3.new(0, 1.5, 0)
+						local pos, onScreen = WorldToScreen(hPos + heightOffset)
+						
+						if onScreen and pos then
+							local elements = {}
+							if eventName then table.insert(elements, data.typeName) end
+							if eventHealth then table.insert(elements, string.format("(%d HP)", math.floor((data.humanoid and data.humanoid.Parent) and data.humanoid.Health or 100))) end
+							if eventDist then table.insert(elements, string.format("[%dm]", math.floor(realMeters))) end
+							
+							local str = table.concat(elements, " ")
+							if str == "" then data.text.Visible = false else
+								data.text.Text = str
+								data.text.Color = getLiveColor(data.config.colorKey, data.config.r, data.config.g, data.config.b)
+								data.text.Position = Vector2.new(pos.X, pos.Y)
+								data.text.Visible = true
+							end
+						else data.text.Visible = false end
+					else data.text.Visible = false end
+				end
+			else 
+				data.text.Visible = false 
 			end
-		else 
-			data.text.Visible = false 
 		end
-	end
-	
-	if #nodeRenderList > 1 then table.sort(nodeRenderList, function(a, b) return a.distance < b.distance end) end
-	if #plantRenderList > 1 then table.sort(plantRenderList, function(a, b) return a.distance < b.distance end) end
-	if #crateRenderList > 1 then table.sort(crateRenderList, function(a, b) return a.distance < b.distance end) end
-	if #dropRenderList > 1 then table.sort(dropRenderList, function(a, b) return a.distance < b.distance end) end
-	if #extraRenderList > 1 then table.sort(extraRenderList, function(a, b) return a.distance < b.distance end) end
-	
-	for i, item in ipairs(nodeRenderList) do
-		if i <= nMaxC then
-			local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 5, 0))
-			if onScreen and pos then
-				local str = ""
-				if item.nameOpt then str = item.data.config.label end
-				if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
-				item.data.text.Text = str
-				item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
-				item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
-				item.data.text.Visible = (str ~= "")
+		
+		if #nodeRenderList > 1 then table.sort(nodeRenderList, function(a, b) return a.distance < b.distance end) end
+		if #plantRenderList > 1 then table.sort(plantRenderList, function(a, b) return a.distance < b.distance end) end
+		if #crateRenderList > 1 then table.sort(crateRenderList, function(a, b) return a.distance < b.distance end) end
+		if #dropRenderList > 1 then table.sort(dropRenderList, function(a, b) return a.distance < b.distance end) end
+		if #extraRenderList > 1 then table.sort(extraRenderList, function(a, b) return a.distance < b.distance end) end
+		
+		for i, item in ipairs(nodeRenderList) do
+			if i <= nMaxC then
+				local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 5, 0))
+				if onScreen and pos then
+					local str = ""
+					if item.nameOpt then str = item.data.config.label end
+					if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
+					item.data.text.Text = str
+					item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
+					item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+					item.data.text.Visible = (str ~= "")
+				else item.data.text.Visible = false end
 			else item.data.text.Visible = false end
-		else item.data.text.Visible = false end
-	end
-	
-	for i, item in ipairs(plantRenderList) do
-		if i <= pMaxC then
-			local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 5, 0))
-			if onScreen and pos then
-				local str = ""
-				if item.nameOpt then str = item.data.config.label end
-				if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
-				item.data.text.Text = str
-				item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
-				item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
-				item.data.text.Visible = (str ~= "")
+		end
+		
+		for i, item in ipairs(plantRenderList) do
+			if i <= pMaxC then
+				local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 5, 0))
+				if onScreen and pos then
+					local str = ""
+					if item.nameOpt then str = item.data.config.label end
+					if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
+					item.data.text.Text = str
+					item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
+					item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+					item.data.text.Visible = (str ~= "")
+				else item.data.text.Visible = false end
 			else item.data.text.Visible = false end
-		else item.data.text.Visible = false end
-	end
+		end
 
-	for i, item in ipairs(crateRenderList) do
-		if i <= cMaxC then
-			local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 3, 0))
-			if onScreen and pos then
-				local str = ""
-				if item.nameOpt then str = item.data.config.label end
-				if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
-				item.data.text.Text = str
-				item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
-				item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
-				item.data.text.Visible = (str ~= "")
+		for i, item in ipairs(crateRenderList) do
+			if i <= cMaxC then
+				local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 3, 0))
+				if onScreen and pos then
+					local str = ""
+					if item.nameOpt then str = item.data.config.label end
+					if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
+					item.data.text.Text = str
+					item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
+					item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+					item.data.text.Visible = (str ~= "")
+				else item.data.text.Visible = false end
 			else item.data.text.Visible = false end
-		else item.data.text.Visible = false end
-	end
+		end
 
-	for i, item in ipairs(dropRenderList) do
-		if i <= dMaxC then
-			local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 1, 0))
-			if onScreen and pos then
-				local str = ""
-				if item.nameOpt then str = item.data.typeName end
-				if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
-				item.data.text.Text = str
-				item.data.text.Color = getLiveColor("col_Drop", 240/255, 240/255, 240/255)
-				item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
-				item.data.text.Visible = (str ~= "")
+		for i, item in ipairs(dropRenderList) do
+			if i <= dMaxC then
+				local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 1, 0))
+				if onScreen and pos then
+					local str = ""
+					if item.nameOpt then str = item.data.typeName end
+					if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
+					item.data.text.Text = str
+					item.data.text.Color = getLiveColor("col_Drop", 240/255, 240/255, 240/255)
+					item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+					item.data.text.Visible = (str ~= "")
+				else item.data.text.Visible = false end
 			else item.data.text.Visible = false end
-		else item.data.text.Visible = false end
-	end
+		end
 
-	for i, item in ipairs(extraRenderList) do
-		if i <= eMaxC then
-			local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 3, 0))
-			if onScreen and pos then
-				local str = ""
-				if item.nameOpt then str = item.data.config.label end
-				if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
-				item.data.text.Text = str
-				item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
-				item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
-				item.data.text.Visible = (str ~= "")
+		for i, item in ipairs(extraRenderList) do
+			if i <= eMaxC then
+				local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 3, 0))
+				if onScreen and pos then
+					local str = ""
+					if item.nameOpt then str = item.data.config.label end
+					if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
+					item.data.text.Text = str
+					item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
+					item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+					item.data.text.Visible = (str ~= "")
+				else item.data.text.Visible = false end
 			else item.data.text.Visible = false end
-		else item.data.text.Visible = false end
-	end
+		end
+	end)
 end)
 
-print("Script fully loaded - Enjoy!")
-print("NPC esp may have some issues dm me if you find any bugs")
-print("IF YOU HAVE TOO MUCH ESP THE SCRIPT WILL CRASH ON DEATH I AM FIXING THIS NOW.")
+print("Script fully loaded - enjoy!")
+print("This script is still very new, so you might experience some bugs or crashes. if you do please dm me @xkhr")
