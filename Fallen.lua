@@ -10,12 +10,39 @@ _G.OldDrawings = {}
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
 local Camera = workspace.CurrentCamera
 
 local WorldToScreen = WorldToScreen or function(position)
 	if not Camera then return Vector3.new(0,0,0), false end
 	local screenPos, onScreen = Camera:WorldToScreenPoint(position)
 	return Vector3.new(screenPos.X, screenPos.Y, screenPos.Z), onScreen
+end
+
+local function getUniqueEntityId(instance)
+	if typeof(instance) ~= "Instance" then return tostring(instance) end
+
+	if type(getaddress) == "function" then
+		local success, addr = pcall(function() return tostring(getaddress(instance)) end)
+		if success and addr and addr ~= "nil" then return addr end
+	end
+
+	local successProp, addrProp = pcall(function() return tostring(instance.Address) end)
+	if successProp and addrProp and addrProp ~= "nil" then
+		return addrProp
+	end
+
+	local successDebug, debugId = pcall(function() return instance:GetDebugId() end)
+	if successDebug and debugId and debugId ~= "" then
+		return debugId
+	end
+
+	local attr = instance:GetAttribute("ESP_PTR")
+	if not attr then
+		attr = HttpService:GenerateGUID(false)
+		pcall(function() instance:SetAttribute("ESP_PTR", attr) end)
+	end
+	return attr
 end
 
 local moderatorNames = {
@@ -108,7 +135,8 @@ local extraPageConfig = {
 	["Sleeper"]              = { toggleKey = "filter_Sleeper",            colorKey = "col_Sleeper",            label = "Sleeper",             r = 210/255, g = 180/255, b = 140/255 },
 	["Salvaged Flycopter"]   = { toggleKey = "filter_Flycopter",          colorKey = "col_Flycopter",          label = "Salvaged Flycopter",   r = 50/255,  g = 220/255, b = 220/255 },
 	["Wooden Boat"]          = { toggleKey = "filter_WoodenBoat",         colorKey = "col_WoodenBoat",         label = "Wooden Boat",         r = 150/255, g = 110/255, b = 80/255  },
-	["Military Boat"]        = { toggleKey = "filter_MilitaryBoat",       colorKey = "col_MilitaryBoat",       label = "Military Boat",       r = 60/255,  g = 120/255, b = 60/255  }
+	["Military Boat"]        = { toggleKey = "filter_MilitaryBoat",       colorKey = "col_MilitaryBoat",       label = "Military Boat",       r = 60/255,  g = 120/255, b = 60/255  },
+	["Body Bag"]             = { toggleKey = "filter_BodyBag",            colorKey = "col_BodyBag",            label = "Body Bag",            r = 180/255, g = 30/255, b = 30/255 }
 }
 
 local animalConfig = {
@@ -198,7 +226,7 @@ UI.AddTab("Fallen", function(tab)
 		sec:SliderInt("extra_max_dist", "Max Distance", 0, 500, 300)
 		sec:Spacing()
 		sec:Text("Extra Filters:")
-		for _, name in ipairs({"Sleeper", "Salvaged Flycopter", "Wooden Boat", "Military Boat"}) do
+		for _, name in ipairs({"Sleeper", "Salvaged Flycopter", "Wooden Boat", "Military Boat", "Body Bag"}) do
 			local config = extraPageConfig[name]
 			sec:Toggle(config.toggleKey, name, true)
 			sec:ColorPicker(config.colorKey, config.r, config.g, config.b, 1)
@@ -283,10 +311,10 @@ local function getLiveColor(colorKey, defaultR, defaultG, defaultB)
 end
 
 local function wipeResourceClass(targetClass)
-	for posKey, data in pairs(drawings) do
+	for key, data in pairs(drawings) do
 		if data.resourceClass == targetClass then
 			pcall(function() data.text:Remove() end)
-			drawings[posKey] = nil
+			drawings[key] = nil
 		end
 	end
 end
@@ -327,23 +355,23 @@ task.spawn(function()
 		local eventsFolder  = workspace:FindFirstChild("Events")
 		local basesFolder   = workspace:FindFirstChild("Bases")
 		local lonersFolder  = basesFolder and basesFolder:FindFirstChild("Loners")
-		
-		for posKey, data in pairs(drawings) do
+
+		for key, data in pairs(drawings) do
 			pcall(function()
 				if data.modelInstance then
 					if not data.modelInstance.Parent then
-						data.text:Remove()
-						drawings[posKey] = nil
+						if data.text then data.text:Remove() end
+						drawings[key] = nil
 					end
 				elseif data.mainPart then
 					if not data.mainPart.Parent then
-						data.text:Remove()
-						drawings[posKey] = nil
+						if data.text then data.text:Remove() end
+						drawings[key] = nil
 					end
 				else
 					if not data.optionalPivotPos then
-						data.text:Remove()
-						drawings[posKey] = nil
+						if data.text then data.text:Remove() end
+						drawings[key] = nil
 					end
 				end
 			end)
@@ -356,10 +384,9 @@ task.spawn(function()
 					if config and UI.GetValue(config.toggleKey) ~= false then
 						local mainPart = child:FindFirstChild("Main") or child:FindFirstChildWhichIsA("BasePart")
 						if mainPart then
-							local pos = mainPart.Position
-							local posKey = "node_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
-							if not drawings[posKey] then
-								drawings[posKey] = { mainPart = mainPart, modelInstance = child, text = createText(), typeName = child.Name, resourceClass = "Node", config = config }
+							local addressKey = getUniqueEntityId(child)
+							if addressKey and not drawings[addressKey] then 
+								drawings[addressKey] = { mainPart = mainPart, modelInstance = child, text = createText(), typeName = child.Name, resourceClass = "Node", config = config }
 							end
 						end
 					end
@@ -375,10 +402,9 @@ task.spawn(function()
 					if config and UI.GetValue(config.toggleKey) ~= false then
 						local mainPart = child:FindFirstChild("Main")
 						if mainPart and mainPart:IsA("MeshPart") then
-							local pos = mainPart.Position
-							local posKey = "plant_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
-							if not drawings[posKey] then
-								drawings[posKey] = { mainPart = mainPart, modelInstance = child, text = createText(), typeName = child.Name, resourceClass = "Plant", config = config }
+							local addressKey = getUniqueEntityId(child)
+							if addressKey and not drawings[addressKey] then
+								drawings[addressKey] = { mainPart = mainPart, modelInstance = child, text = createText(), typeName = child.Name, resourceClass = "Plant", config = config }
 							end
 						end
 					end
@@ -397,13 +423,12 @@ task.spawn(function()
 					if isCrateTracked or isExtraTracked then
 						if child:FindFirstChild("Main") or child:FindFirstChildWhichIsA("BasePart") then
 							local desc = child:FindFirstChild("Main") or child:FindFirstChildWhichIsA("BasePart")
-							local finalPos = desc.Position
 							local cType = isCrateTracked and "Crate" or "Extra"
 							local conf = isCrateTracked and crateConfig[name] or extraPageConfig[name]
-							local posKey = cType:lower() .. "_" .. math.floor(finalPos.X) .. "_" .. math.floor(finalPos.Y) .. "_" .. math.floor(finalPos.Z)
 							
-							if not drawings[posKey] then
-								drawings[posKey] = { mainPart = desc, modelInstance = child, text = createText(), typeName = name, resourceClass = cType, config = conf }
+							local addressKey = getUniqueEntityId(child)
+							if addressKey and not drawings[addressKey] then
+								drawings[addressKey] = { mainPart = desc, modelInstance = child, text = createText(), typeName = name, resourceClass = cType, config = conf }
 							end
 						else
 							for _, actualItem in ipairs(child:GetChildren()) do
@@ -415,15 +440,13 @@ task.spawn(function()
 									if success and pivot then pivotFallbackPos = pivot.Position end
 								end
 								
-								local finalPos = desc and desc.Position or pivotFallbackPos
-								
-								if finalPos then
+								if desc or pivotFallbackPos then
 									local cType = isCrateTracked and "Crate" or "Extra"
 									local conf = isCrateTracked and crateConfig[name] or extraPageConfig[name]
-									local posKey = cType:lower() .. "_" .. math.floor(finalPos.X) .. "_" .. math.floor(finalPos.Y) .. "_" .. math.floor(finalPos.Z)
 									
-									if not drawings[posKey] then
-										drawings[posKey] = { 
+									local addressKey = getUniqueEntityId(actualItem)
+									if addressKey and not drawings[addressKey] then
+										drawings[addressKey] = { 
 											mainPart = desc, 
 											modelInstance = actualItem,
 											text = createText(), 
@@ -452,11 +475,10 @@ task.spawn(function()
 						if success and pivot then pivotFallbackPos = pivot.Position end
 					end
 					
-					local finalPos = targetPart and targetPart.Position or pivotFallbackPos
-					if finalPos then
-						local posKey = "drop_" .. math.floor(finalPos.X) .. "," .. math.floor(finalPos.Y) .. "," .. math.floor(finalPos.Z)
-						if not drawings[posKey] then
-							drawings[posKey] = { mainPart = targetPart, modelInstance = child, text = createText(), typeName = child.Name, resourceClass = "Drop", optionalPivotPos = pivotFallbackPos }
+					if targetPart or pivotFallbackPos then
+						local addressKey = getUniqueEntityId(child)
+						if addressKey and not drawings[addressKey] then
+							drawings[addressKey] = { mainPart = targetPart, modelInstance = child, text = createText(), typeName = child.Name, resourceClass = "Drop", optionalPivotPos = pivotFallbackPos }
 						end
 					end
 				end
@@ -474,10 +496,9 @@ task.spawn(function()
 						local humanoid = child:FindFirstChildWhichIsA("Humanoid") or (detail and detail:FindFirstChildWhichIsA("Humanoid"))
 						
 						if rootPart and rootPart:IsA("BasePart") then
-							local fallbackID = tostring(child) .. "_" .. math.floor(rootPart.Position.X) .. "_" .. math.floor(rootPart.Position.Z)
-							local key = "animal_" .. fallbackID
-							if not drawings[key] then
-								drawings[key] = { mainPart = rootPart, modelInstance = child, text = createText(), typeName = child.Name, resourceClass = "Animal", humanoid = humanoid, config = config }
+							local addressKey = getUniqueEntityId(child)
+							if addressKey and not drawings[addressKey] then
+								drawings[addressKey] = { mainPart = rootPart, modelInstance = child, text = createText(), typeName = child.Name, resourceClass = "Animal", humanoid = humanoid, config = config }
 							end
 						end
 					end
@@ -498,9 +519,9 @@ task.spawn(function()
 									local humanoid = object:FindFirstChildWhichIsA("Humanoid")
 									
 									if headPart then
-										local npcID = "npc_" .. tostring(object) .. "_" .. math.floor(headPart.Position.X)
-										if not drawings[npcID] then
-											drawings[npcID] = { 
+										local addressKey = getUniqueEntityId(object)
+										if addressKey and not drawings[addressKey] then
+											drawings[addressKey] = { 
 												mainPart = headPart, 
 												modelInstance = object,
 												text = createText(), 
@@ -529,11 +550,9 @@ task.spawn(function()
 					if brunoObj then
 						local headPart = brunoObj:FindFirstChild("Head")
 						local humanoid = brunoObj:FindFirstChildWhichIsA("Humanoid")
-						if headPart then
-							local bossKey = "event_bruno_" .. math.floor(headPart.Position.X)
-							if not drawings[bossKey] then
-								drawings[bossKey] = { mainPart = headPart, modelInstance = brunoObj, text = createText(), typeName = "Bruno", resourceClass = "Event", humanoid = humanoid, config = bossConfig["Bruno"] }
-							end
+						local addressKey = getUniqueEntityId(brunoObj)
+						if headPart and addressKey and not drawings[addressKey] then
+							drawings[addressKey] = { mainPart = headPart, modelInstance = brunoObj, text = createText(), typeName = "Bruno", resourceClass = "Event", humanoid = humanoid, config = bossConfig["Bruno"] }
 						end
 					end
 				end
@@ -544,11 +563,9 @@ task.spawn(function()
 					if brutusObj then
 						local headPart = brutusObj:FindFirstChild("Head")
 						local humanoid = brutusObj:FindFirstChildWhichIsA("Humanoid")
-						if headPart then
-							local bossKey = "event_brutus_" .. math.floor(headPart.Position.X)
-							if not drawings[bossKey] then
-								drawings[bossKey] = { mainPart = headPart, modelInstance = brutusObj, text = createText(), typeName = "Brutus", resourceClass = "Event", humanoid = humanoid, config = bossConfig["Brutus"] }
-							end
+						local addressKey = getUniqueEntityId(brutusObj)
+						if headPart and addressKey and not drawings[addressKey] then
+							drawings[addressKey] = { mainPart = headPart, modelInstance = brutusObj, text = createText(), typeName = "Brutus", resourceClass = "Event", humanoid = humanoid, config = bossConfig["Brutus"] }
 						end
 					end
 				end
@@ -559,11 +576,9 @@ task.spawn(function()
 					if borisObj then
 						local headPart = borisObj:FindFirstChild("Head")
 						local humanoid = borisObj:FindFirstChildWhichIsA("Humanoid")
-						if headPart then
-							local bossKey = "event_boris_" .. math.floor(headPart.Position.X)
-							if not drawings[bossKey] then
-								drawings[bossKey] = { mainPart = headPart, modelInstance = borisObj, text = createText(), typeName = "Boris", resourceClass = "Event", humanoid = humanoid, config = bossConfig["Boris"] }
-							end
+						local addressKey = getUniqueEntityId(borisObj)
+						if headPart and addressKey and not drawings[addressKey] then
+							drawings[addressKey] = { mainPart = headPart, modelInstance = borisObj, text = createText(), typeName = "Boris", resourceClass = "Event", humanoid = humanoid, config = bossConfig["Boris"] }
 						end
 					end
 				end
@@ -573,11 +588,9 @@ task.spawn(function()
 					if btrObj then
 						local hrpPart = btrObj:FindFirstChild("HumanoidRootPart")
 						local humanoid = btrObj:FindFirstChildWhichIsA("Humanoid") or btrObj:FindFirstChild("Humanoid")
-						if hrpPart then
-							local bossKey = "event_btr_" .. math.floor(hrpPart.Position.X)
-							if not drawings[bossKey] then
-								drawings[bossKey] = { mainPart = hrpPart, modelInstance = btrObj, text = createText(), typeName = "BTR", resourceClass = "Event", humanoid = humanoid, config = bossConfig["BTR"] }
-							end
+						local addressKey = getUniqueEntityId(btrObj)
+						if hrpPart and addressKey and not drawings[addressKey] then
+							drawings[addressKey] = { mainPart = hrpPart, modelInstance = btrObj, text = createText(), typeName = "BTR", resourceClass = "Event", humanoid = humanoid, config = bossConfig["BTR"] }
 						end
 					end
 				end
@@ -735,7 +748,7 @@ RunService.RenderStepped:Connect(function()
 	local dropRenderList   = {}
 	local extraRenderList  = {}
 	
-	for posKey, data in pairs(drawings) do
+	for key, data in pairs(drawings) do
 		if not data.text then continue end
 		data.text.Size = globalTextSize
 		
@@ -945,6 +958,4 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
-print("Script fully loaded")
-print("I have not fully tested the script dm me if there is any problems @xkhr")
-print("Credit to Code.leak for the mod list")
+print("Script fully loaded - enjoy! - Dm @xkhr if there is any issues or suggestions.")
