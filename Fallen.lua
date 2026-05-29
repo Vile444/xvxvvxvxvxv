@@ -1004,3 +1004,4 @@ end)
 
 print("Script fully loaded - Enjoy!")
 print("NPC esp may have some issues dm me if you find any bugs")
+print("IF YOU HAVE TOO MUCH ESP THE SCRIPT WILL CRASH ON DEATH I AM FIXING THIS NOW.")
