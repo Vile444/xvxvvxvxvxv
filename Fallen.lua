@@ -284,7 +284,7 @@ UI.AddTab("Fallen", function(tab)
 	local extraSec = tab:Section("Staff Alerts / Settings", "Right", nil, 220)
 	extraSec:Toggle("act_mod_alert", "Active Mod Alert", true)
 	extraSec:Text("Credit to code.leak for the mod list")
-	extraSec:SliderInt("script_text_size", "Text Size", 10, 32, 16)
+	extraSec:SliderInt("script_text_size", "Text Size", 10, 32, 13)
 	extraSec:SliderInt("script_fps_target", "Script Fps", 30, 240, 60)
 end)
 
