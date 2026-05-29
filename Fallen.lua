@@ -1,0 +1,848 @@
+-- Made with AI Credit to Code.leak for the mod list
+-- I havent tested for problems so dm me if theres any issues
+
+if _G.OldDrawings then
+	for _, text in ipairs(_G.OldDrawings) do
+		pcall(function() text:Remove() end)
+	end
+end
+_G.OldDrawings = {}
+
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Camera = workspace.CurrentCamera
+
+local WorldToScreen = WorldToScreen or function(position)
+	local screenPos, onScreen = Camera:WorldToScreenPoint(position)
+	return Vector3.new(screenPos.X, screenPos.Y, screenPos.Z), onScreen
+end
+
+local moderatorNames = {
+	["neddleduck"] = "Founder",
+	["ChickenBagelz"] = "Co-Founder", ["Chicken"] = "Co-Founder",
+	["Warm_Vibes"] = "Lead Developer", ["AsianAbrex"] = "Lead Developer", ["Abrex"] = "Lead Developer",
+	["fordjdj12"] = "Game Moderator", ["me4jox"] = "Game Moderator", ["B_BEAMO"] = "Game Moderator",
+	["Goober"] = "Game Moderator", ["Matheus06532"] = "Game Moderator", ["ROGERIO"] = "Game Moderator",
+	["harrib_allsack54321"] = "Game Moderator", ["Harrib"] = "Game Moderator", 
+	["3verIast"] = "Game Moderator",
+	["fearedbyvamp"] = "Game Moderator", ["wrahware"] = "Game Moderator", ["roblox_23193"] = "Game Moderator",
+	["warcora"] = "Game Moderator", ["Puhgee"] = "Game Moderator", ["Prye4"] = "Game Moderator",
+	["AaronElagant"] = "Game Moderator", ["Trafalagar"] = "Game Moderator", ["joax009617"] = "Game Moderator",
+	["bleh"] = "Game Moderator", ["chrisatmfan21"] = "Game Moderator", ["RealSnowey"] = "Game Moderator",
+	["hello_myfriends45"] = "Game Moderator", ["84ko"] = "Game Moderator", ["zenny_boy0"] = "Game Moderator",
+	["Zen"] = "Game Moderator", ["Kaz_Elite"] = "Game Moderator", ["Xion_Light"] = "Game Moderator",
+	["BeamedByTimmy"] = "Game Moderator", ["Bajoogies_XD"] = "Game Moderator", ["cbmamak"] = "Game Moderator",
+	["GamerMauriiYT"] = "Game Moderator", ["TS_GamerMauriiYTT"] = "Game Moderator", ["Kitty_1624"] = "Game Moderator",
+	["Cloak"] = "Game Moderator", ["redbullgivesu_WINGS4"] = "Game Moderator", ["Redbullgivesyou_WING"] = "Game Moderator",
+	["coolboyofawsome4"] = "Game Moderator", ["Cendre"] = "Game Moderator", ["Hsixienn"] = "Game Moderator",
+	["Yuri Adorer"] = "Game Moderator", ["ilovetowerbattle_9"] = "Game Moderator", ["Oliveoil"] = "Game Moderator",
+	["Sotojulio06"] = "Game Moderator", ["Mist"] = "Game Moderator", ["Hakob_8w8"] = "Game Moderator",
+	["Magnus_Carlsen"] = "Game Moderator", ["imghostoma"] = "Game Moderator", ["S6s"] = "Game Moderator",
+	["Fan_hellrider"] = "Game Moderator", ["YT_RT"] = "Game Moderator", ["Chinyro"] = "Game Moderator",
+	["owner12310"] = "Game Moderator", ["Divine"] = "Game Moderator", ["aidenas2011"] = "Game Moderator",
+	["CClipz"] = "Game Moderator", ["gamerofdestroyers"] = "Game Moderator", ["Gamer"] = "Game Moderator",
+	["puferyba"] = "Game Moderator", ["Polonium_fake"] = "Game Moderator", ["Lexi34567812"] = "Game Moderator",
+	["jerry"] = "Game Moderator", ["chancerocke"] = "Game Moderator", ["Chance"] = "Game Moderator",
+	["DopeIlI"] = "Game Moderator", ["W00K101"] = "Game Moderator", ["Rikumah"] = "Game Moderator",
+	["Rikuma"] = "Game Moderator", ["KittenBagelz"] = "Game Moderator", ["Kitty"] = "Game Moderator",
+}
+
+local moderatorIds = {
+	[16681869] = "Founder", [47983795] = "Co-Founder", [25548179] = "Lead Developer",
+	[363101315] = "Lead Developer", [174212818] = "Contribution", [81993536] = "CClipZ (TARGET)",
+	[51281722] = "Game Moderator", [7178750309] = "Game Moderator", [113179883] = "Game Moderator", 
+	[3122439095] = "Game Moderator", [991290934] = "Game Moderator", [3968854760] = "Game Moderator", 
+	[114812725] = "Game Moderator", [81993536] = "Game Moderator", [1004214871] = "Game Moderator", 
+	[914847610] = "Game Moderator", [3034930770] = "Game Moderator", [1622256215] = "Game Moderator", 
+	[1116486172] = "Game Moderator", [4252853044] = "Game Moderator", [2364950171] = "Game Moderator",
+	[1528346843] = "Game Moderator", [165053216] = "Game Moderator", [9024231578] = "Game Moderator", 
+	[1127954045] = "Game Moderator", [3640120679] = "Game Moderator", [602009251] = "Game Moderator", 
+	[372791101] = "Game Moderator", [1378169111] = "Game Moderator", [3020799797] = "Game Moderator", 
+	[372528624] = "Game Moderator", [2567998467] = "Game Moderator", [4243907215] = "Game Moderator", 
+	[813030262] = "Game Moderator", [353983652] = "Game Moderator", [1406181681] = "Game Moderator", 
+	[2229169589] = "Game Moderator", [30934698] = "Game Moderator", [3004094651] = "Game Moderator", 
+	[839333692] = "Game Moderator", [979624578] = "Game Moderator", [1478885961] = "Game Moderator",
+	[4767504693] = "Staff", [750714593] = "Staff", [1586207495] = "Staff",
+}
+
+local overlayText = Drawing.new("Text")
+overlayText.Color = Color3.fromRGB(255, 255, 255)
+overlayText.Outline = true
+overlayText.Center = false
+overlayText.Font = Drawing.Fonts.System
+overlayText.Visible = false
+table.insert(_G.OldDrawings, overlayText)
+
+local blinkState = true
+
+local plantConfig = {
+	["Wool Plant"]      = { toggleKey = "filter_Wool",      colorKey = "col_Wool",      label = "Wool",      r = 215/255, g = 207/255, b = 207/255 },
+	["Corn Plant"]      = { toggleKey = "filter_Corn",      colorKey = "col_Corn",      label = "Corn",      r = 255/255, g = 237/255, b = 0/255   },
+	["Lemon Plant"]     = { toggleKey = "filter_Lemon",     colorKey = "col_Lemon",     label = "Lemon",     r = 255/255, g = 255/255, b = 0/255   },
+	["Tomato Plant"]    = { toggleKey = "filter_Tomato",    colorKey = "col_Tomato",    label = "Tomato",    r = 255/255, g = 0/255,   b = 0/255   },
+	["Pumpkin Plant"]   = { toggleKey = "filter_Pumpkin",   colorKey = "col_Pumpkin",   label = "Pumpkin",   r = 255/255, g = 175/255, b = 0/255   },
+	["Blueberry Plant"] = { toggleKey = "filter_Blueberry", colorKey = "col_Blueberry", label = "Blueberry", r = 0/255,   g = 100/255, b = 255/255 },
+	["Raspberry Plant"] = { toggleKey = "filter_Raspberry", colorKey = "col_Raspberry", label = "Raspberry", r = 255/255, g = 75/255,  b = 100/255 }
+}
+
+local nodeConfig = {
+	["Stone_Node"]     = { toggleKey = "filter_Stone",  colorKey = "col_Stone",  label = "Stone Node", r = 140/255, g = 140/255, b = 140/255 },
+	["Metal_Node"]     = { toggleKey = "filter_Metal",  colorKey = "col_Metal",  label = "Metal Node", r = 185/255, g = 140/255, b = 100/255 },
+	["Phosphate_Node"] = { toggleKey = "filter_Phos",   colorKey = "col_Phos",   label = "Phos Node",  r = 200/255, g = 170/255, b = 0/255   }
+}
+
+local crateConfig = {
+	["Food Crate"]           = { toggleKey = "filter_FoodCrate",          colorKey = "col_FoodCrate",          label = "Food Crate",          r = 255/255, g = 150/255, b = 50/255 },
+	["Wooden Crate"]         = { toggleKey = "filter_WoodenCrate",        colorKey = "col_WoodenCrate",        label = "Wooden Crate",        r = 160/255, g = 120/255, b = 90/255  },
+	["Locked Wooden Crate"]  = { toggleKey = "filter_LockedWoodenCrate", colorKey = "col_LockedWoodenCrate", label = "Locked Wooden Crate", r = 130/255, g = 90/255,  b = 60/255  },
+	["Locked Metal Crate"]   = { toggleKey = "filter_LockedMetalCrate",  colorKey = "col_LockedMetalCrate",  label = "Locked Metal Crate",  r = 140/255, g = 150/255, b = 160/255 },
+	["Locked Steel Crate"]   = { toggleKey = "filter_LockedSteelCrate",  colorKey = "col_LockedSteelCrate",  label = "Locked Steel Crate",  r = 100/255, g = 180/255, b = 220/255 },
+	["Timed Crate"]          = { toggleKey = "filter_TimedCrate",         colorKey = "col_TimedCrate",         label = "Timed Crate",         r = 240/255, g = 70/255,  b = 70/255  },
+	["Care Package"]         = { toggleKey = "filter_CarePackage",        colorKey = "col_CarePackage",        label = "Care Package",        r = 230/255, g = 220/255, b = 50/255  },
+	["Trash Can"]            = { toggleKey = "filter_TrashCan",           colorKey = "col_TrashCan",           label = "Trash Can",           r = 120/255, g = 120/255, b = 120/255 },
+	["Oil Barrel"]           = { toggleKey = "filter_OilBarrel",          colorKey = "col_OilBarrel",          label = "Oil Barrel",          r = 60/255,  g = 60/255,  b = 60/255  }
+}
+
+local extraPageConfig = {
+	["Sleeper"]              = { toggleKey = "filter_Sleeper",            colorKey = "col_Sleeper",            label = "Sleeper",             r = 210/255, g = 180/255, b = 140/255 },
+	["Salvaged Flycopter"]   = { toggleKey = "filter_Flycopter",          colorKey = "col_Flycopter",          label = "Salvaged Flycopter",   r = 50/255,  g = 220/255, b = 220/255 },
+	["Wooden Boat"]          = { toggleKey = "filter_WoodenBoat",         colorKey = "col_WoodenBoat",         label = "Wooden Boat",         r = 150/255, g = 110/255, b = 80/255  },
+	["Military Boat"]        = { toggleKey = "filter_MilitaryBoat",       colorKey = "col_MilitaryBoat",       label = "Military Boat",       r = 60/255,  g = 120/255, b = 60/255  }
+}
+
+local animalConfig = {
+	["PREFAB_ANIMAL_DEER"]      = { toggleKey = "filter_Deer", colorKey = "col_Deer", label = "Deer", r = 190/255, g = 130/255, b = 80/255  },
+	["PREFAB_ANIMAL_WILDBOAR"]  = { toggleKey = "filter_Boar", colorKey = "col_Boar", label = "Boar", r = 130/255, g = 100/255, b = 80/255  },
+	["PREFAB_ANIMAL_WOLF"]      = { toggleKey = "filter_Wolf", colorKey = "col_Wolf", label = "Wolf", r = 160/255, g = 160/255, b = 170/255 }
+}
+
+local locationList = {
+	"Abandoned Bunker", "Military Airfield", "Military Base", "Military Barracks",
+	"Rocket Factory", "Industrial Port", "Cargo Yard", "Labs", "Submarine",
+	"ConvoyOne", "ConvoyTwo", "ConvoyThree", "ConvoyFour"
+}
+
+UI.AddTab("fallen", function(tab)
+	local sec = tab:Section("ESP Configurations", "Left", {"Nodes", "Plants", "Crates", "Drops", "Extra"}, 450)
+	
+	if sec.page == 0 then
+		sec:Toggle("node_enabled", "Enabled")
+		sec:Toggle("node_name", "Name ESP")
+		sec:Toggle("node_distance", "Distance ESP")
+		sec:SliderInt("node_max_count", "Max Nodes", 1, 125, 50)
+		sec:SliderInt("node_max_dist", "Max Distance", 0, 500, 300)
+		sec:Spacing()
+		sec:Text("Nodes Filter:")
+		for _, name in ipairs({"Stone_Node", "Metal_Node", "Phosphate_Node"}) do
+			local config = nodeConfig[name]
+			sec:Toggle(config.toggleKey, config.label, true)
+			sec:ColorPicker(config.colorKey, config.r, config.g, config.b, 1)
+		end
+		
+	elseif sec.page == 1 then
+		sec:Toggle("plant_enabled", "Enabled")
+		sec:Toggle("plant_name", "Name ESP")
+		sec:Toggle("plant_distance", "Distance ESP")
+		sec:SliderInt("plant_max_count", "Max Plants", 1, 125, 50)
+		sec:SliderInt("plant_max_dist", "Max Distance", 0, 500, 300)
+		sec:Spacing()
+		sec:Text("Plants Filter & Colors:")
+		for _, name in ipairs({"Wool Plant", "Corn Plant", "Lemon Plant", "Tomato Plant", "Pumpkin Plant", "Blueberry Plant", "Raspberry Plant"}) do
+			local config = plantConfig[name]
+			sec:Toggle(config.toggleKey, name, true)
+			sec:ColorPicker(config.colorKey, config.r, config.g, config.b, 1)
+		end
+
+	elseif sec.page == 2 then
+		sec:Toggle("crate_enabled", "Enabled")
+		sec:Toggle("crate_name", "Name ESP")
+		sec:Toggle("crate_distance", "Distance ESP")
+		sec:SliderInt("crate_max_count", "Max Crates", 1, 125, 50)
+		sec:SliderInt("crate_max_dist", "Max Distance", 0, 500, 300)
+		sec:Spacing()
+		sec:Text("Crate Filters:")
+		for _, name in ipairs({"Food Crate", "Wooden Crate", "Locked Wooden Crate", "Locked Metal Crate", "Locked Steel Crate", "Timed Crate"}) do
+			local config = crateConfig[name]
+			sec:Toggle(config.toggleKey, name, true)
+			sec:ColorPicker(config.colorKey, config.r, config.g, config.b, 1)
+		end
+		sec:Spacing()
+		sec:Text("Extra")
+		for _, name in ipairs({"Care Package", "Trash Can", "Oil Barrel"}) do
+			local config = crateConfig[name]
+			sec:Toggle(config.toggleKey, name, true)
+			sec:ColorPicker(config.colorKey, config.r, config.g, config.b, 1)
+		end
+
+	elseif sec.page == 3 then
+		sec:Toggle("drop_enabled", "Enabled")
+		sec:ColorPicker("col_Drop", 240/255, 240/255, 240/255, 1)
+		sec:Toggle("drop_name", "Name ESP")
+		sec:Toggle("drop_distance", "Distance ESP")
+		sec:SliderInt("drop_max_count", "Max Drops", 1, 75, 40)
+		sec:SliderInt("drop_max_dist", "Max Distance", 1, 500, 250)
+
+	elseif sec.page == 4 then
+		sec:Toggle("extra_enabled", "Enabled")
+		sec:Toggle("extra_name", "Name ESP")
+		sec:Toggle("extra_distance", "Distance ESP")
+		sec:SliderInt("extra_max_count", "Max Extra Objects", 1, 125, 50)
+		sec:SliderInt("extra_max_dist", "Max Distance", 0, 500, 300)
+		sec:Spacing()
+		sec:Text("Extra Filters:")
+		for _, name in ipairs({"Sleeper", "Salvaged Flycopter", "Wooden Boat", "Military Boat"}) do
+			local config = extraPageConfig[name]
+			sec:Toggle(config.toggleKey, name, true)
+			sec:ColorPicker(config.colorKey, config.r, config.g, config.b, 1)
+		end
+	end
+
+	local animSec = tab:Section("Animals", "Left", nil, 320)
+	animSec:Toggle("animal_enabled", "Enabled")
+	animSec:Toggle("animal_name", "Name ESP")
+	animSec:Toggle("animal_health", "Health ESP")
+	animSec:Toggle("animal_distance", "Distance ESP")
+	animSec:SliderInt("animal_max_dist", "Max Distance", 1, 500, 250)
+	animSec:Spacing()
+	animSec:Text("Animals Filter:")
+	for _, rawName in ipairs({"PREFAB_ANIMAL_DEER", "PREFAB_ANIMAL_WILDBOAR", "PREFAB_ANIMAL_WOLF"}) do
+		local config = animalConfig[rawName]
+		animSec:Toggle(config.toggleKey, config.label, true)
+		animSec:ColorPicker(config.colorKey, config.r, config.g, config.b, 1)
+	end
+
+	local rightSec = tab:Section("Threat Management", "Right", {"NPCs", "Locations"}, 450)
+	
+	if rightSec.page == 0 then
+		rightSec:Toggle("npc_enabled", "Enabled")
+		rightSec:ColorPicker("col_npc_esp", 255/255, 50/255, 50/255, 1)
+		rightSec:Toggle("npc_name", "Name")
+		rightSec:Toggle("npc_health", "Health")
+		rightSec:Toggle("npc_distance", "Distance")
+		rightSec:SliderInt("npc_max_dist", "Max Distance", 1, 5000, 1500)
+		
+	elseif rightSec.page == 1 then
+		rightSec:Toggle("loc_all", "All", false)
+		rightSec:Spacing()
+		rightSec:Text("Location Filter:")
+		for _, locName in ipairs(locationList) do
+			local safeKey = "loc_filter_" .. locName:gsub(" ", "")
+			rightSec:Toggle(safeKey, locName, false)
+		end
+	end
+
+	local extraSec = tab:Section("Extra / Staff Alerts", "Right", nil, 220)
+	extraSec:Toggle("act_mod_alert", "Active Mod Alert", true)
+	extraSec:Text("Credit to code.leak for the mod list")
+	extraSec:SliderInt("script_text_size", "Text Size", 10, 32, 16)
+	extraSec:SliderInt("script_fps_target", "Script Fps", 30, 240, 60)
+end)
+
+local drawings = {}
+
+local function createText()
+	local text = Drawing.new("Text")
+	text.Size = UI.GetValue("script_text_size") or 16
+	text.Center = true
+	text.Outline = true
+	text.Color = Color3.fromRGB(255, 255, 255)
+	text.Font = Drawing.Fonts.System
+	text.Visible = false
+	table.insert(_G.OldDrawings, text)
+	return text
+end
+
+local function getLiveColor(colorKey, defaultR, defaultG, defaultB)
+	local r, g, b = UI.GetValue(colorKey)
+	if r and g and b then
+		return Color3.fromRGB(math.floor(r * 255), math.floor(g * 255), math.floor(b * 255))
+	end
+	return Color3.fromRGB(math.floor(defaultR * 255), math.floor(defaultG * 255), math.floor(defaultB * 255))
+end
+
+local function wipeResourceClass(targetClass)
+	for posKey, data in pairs(drawings) do
+		if data.resourceClass == targetClass then
+			pcall(function() data.text:Remove() end)
+			drawings[posKey] = nil
+		end
+	end
+end
+
+local function isLocationActive(locName)
+	if UI.GetValue("loc_all") then return true end
+	local safeKey = "loc_filter_" .. locName:gsub(" ", "")
+	return UI.GetValue(safeKey) or false
+end
+
+task.spawn(function()
+	while true do
+		task.wait(3.0)
+		
+		local nMaster = UI.GetValue("node_enabled") or false
+		local pMaster = UI.GetValue("plant_enabled") or false
+		local cMaster = UI.GetValue("crate_enabled") or false
+		local dMaster = UI.GetValue("drop_enabled") or false
+		local eMaster = UI.GetValue("extra_enabled") or false
+		local aMaster = UI.GetValue("animal_enabled") or false
+		local npcMaster = UI.GetValue("npc_enabled") or false
+		
+		if not nMaster then wipeResourceClass("Node") end
+		if not pMaster then wipeResourceClass("Plant") end
+		if not cMaster then wipeResourceClass("Crate") end
+		if not dMaster then wipeResourceClass("Drop") end
+		if not eMaster then wipeResourceClass("Extra") end
+		if not aMaster then wipeResourceClass("Animal") end
+		if not npcMaster then wipeResourceClass("NPC") end
+		
+		local nodesFolder   = workspace:FindFirstChild("Nodes")
+		local plantsFolder  = workspace:FindFirstChild("Plants")
+		local dropsFolder   = workspace:FindFirstChild("Drops")
+		local animalsFolder = workspace:FindFirstChild("Animals")
+		local miltaryFolder = workspace:FindFirstChild("Military")
+		local basesFolder   = workspace:FindFirstChild("Bases")
+		local lonersFolder  = basesFolder and basesFolder:FindFirstChild("Loners")
+		
+		for posKey, data in pairs(drawings) do
+			if data.resourceClass == "Animal" or data.resourceClass == "NPC" then
+				if not (data.modelInstance and data.modelInstance.Parent and data.mainPart and data.mainPart.Parent) then
+					pcall(function() data.text:Remove() end)
+					drawings[posKey] = nil
+				end
+			else
+				if not (data.mainPart and data.mainPart.Parent) and not data.optionalPivotPos then
+					pcall(function() data.text:Remove() end)
+					drawings[posKey] = nil
+				end
+			end
+		end
+		
+		if nMaster and nodesFolder then
+			for _, child in ipairs(nodesFolder:GetChildren()) do
+				local config = nodeConfig[child.Name]
+				if config and UI.GetValue(config.toggleKey) ~= false then
+					local mainPart = child:FindFirstChild("Main") or child:FindFirstChildWhichIsA("BasePart")
+					if mainPart then
+						local pos = mainPart.Position
+						local posKey = "node_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
+						if not drawings[posKey] then
+							drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = child.Name, resourceClass = "Node", config = config }
+						end
+					end
+				end
+			end
+		end
+		
+		if pMaster and plantsFolder then
+			for _, child in ipairs(plantsFolder:GetChildren()) do
+				local config = plantConfig[child.Name]
+				if config and UI.GetValue(config.toggleKey) ~= false then
+					local mainPart = child:FindFirstChild("Main")
+					if mainPart and mainPart:IsA("MeshPart") then
+						local pos = mainPart.Position
+						local posKey = "plant_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
+						if not drawings[posKey] then
+							drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = child.Name, resourceClass = "Plant", config = config }
+						end
+					end
+				end
+			end
+		end
+
+		if lonersFolder then
+			-- 1. Scan Sleepers Directly
+			local sleeperFolder = lonersFolder:FindFirstChild("Sleeper")
+			if sleeperFolder and eMaster and UI.GetValue(extraPageConfig["Sleeper"].toggleKey) ~= false then
+				for _, sleeperInstance in ipairs(sleeperFolder:GetChildren()) do
+					if sleeperInstance.Name == "Sleeper" then
+						local mainPart = sleeperInstance:FindFirstChild("Main")
+						if mainPart and mainPart:IsA("BasePart") then
+							local pos = mainPart.Position
+							local posKey = "extra_sleeper_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
+							if not drawings[posKey] then
+								drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = "Sleeper", resourceClass = "Extra", config = extraPageConfig["Sleeper"] }
+							end
+						end
+					end
+				end
+			end
+
+			local flycopterFolder = lonersFolder:FindFirstChild("Salvaged Flycopter")
+			if flycopterFolder and eMaster and UI.GetValue(extraPageConfig["Salvaged Flycopter"].toggleKey) ~= false then
+				for _, flycopterInstance in ipairs(flycopterFolder:GetChildren()) do
+					if flycopterInstance.Name == "Salvaged Flycopter" then
+						local mainPart = flycopterInstance:FindFirstChild("Main")
+						if mainPart and mainPart:IsA("BasePart") then
+							local pos = mainPart.Position
+							local posKey = "extra_flycopter_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
+							if not drawings[posKey] then
+								drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = "Salvaged Flycopter", resourceClass = "Extra", config = extraPageConfig["Salvaged Flycopter"] }
+							end
+						end
+					end
+				end
+			end
+
+			local woodenBoatFolder = lonersFolder:FindFirstChild("Wooden Boat")
+			if woodenBoatFolder and eMaster and UI.GetValue(extraPageConfig["Wooden Boat"].toggleKey) ~= false then
+				for _, boatInstance in ipairs(woodenBoatFolder:GetChildren()) do
+					if boatInstance.Name == "Wooden Boat" then
+						local mainPart = boatInstance:FindFirstChild("Main")
+						if mainPart and mainPart:IsA("BasePart") then
+							local pos = mainPart.Position
+							local posKey = "extra_woodenboat_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
+							if not drawings[posKey] then
+								drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = "Wooden Boat", resourceClass = "Extra", config = extraPageConfig["Wooden Boat"] }
+							end
+						end
+					end
+				end
+			end
+
+			local milBoatFolder = lonersFolder:FindFirstChild("Military Boat")
+			if milBoatFolder and eMaster and UI.GetValue(extraPageConfig["Military Boat"].toggleKey) ~= false then
+				for _, boatInstance in ipairs(milBoatFolder:GetChildren()) do
+					if boatInstance.Name == "Military Boat" then
+						local mainPart = boatInstance:FindFirstChild("Main")
+						if mainPart and mainPart:IsA("BasePart") then
+							local pos = mainPart.Position
+							local posKey = "extra_milboat_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
+							if not drawings[posKey] then
+								drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = "Military Boat", resourceClass = "Extra", config = extraPageConfig["Military Boat"] }
+							end
+						end
+					end
+				end
+			end
+
+			local carePackageFolder = lonersFolder:FindFirstChild("Care Package")
+			if carePackageFolder and cMaster and UI.GetValue(crateConfig["Care Package"].toggleKey) ~= false then
+				for _, packageInstance in ipairs(carePackageFolder:GetChildren()) do
+					if packageInstance.Name == "Care Package" then
+						local mainPart = packageInstance:FindFirstChild("Main") or packageInstance:FindFirstChildWhichIsA("BasePart")
+						local pivotFallbackPos = nil
+						if not mainPart and packageInstance:IsA("Model") then
+							local success, pivot = pcall(function() return packageInstance:GetPivot() end)
+							if success and pivot then pivotFallbackPos = pivot.Position end
+						end
+						
+						local finalPos = mainPart and mainPart.Position or pivotFallbackPos
+						if finalPos then
+							local posKey = "crate_carepackage_" .. math.floor(finalPos.X) .. "," .. math.floor(finalPos.Y) .. "," .. math.floor(finalPos.Z)
+							if not drawings[posKey] then
+								drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = "Care Package", resourceClass = "Crate", config = crateConfig["Care Package"], optionalPivotPos = pivotFallbackPos }
+							end
+						end
+					end
+				end
+			end
+
+			local crateTypes = {"Food Crate", "Wooden Crate", "Locked Wooden Crate", "Locked Metal Crate", "Locked Steel Crate", "Timed Crate", "Trash Can", "Oil Barrel"}
+			for _, name in ipairs(crateTypes) do
+				local configData = crateConfig[name]
+				if configData and cMaster and UI.GetValue(configData.toggleKey) ~= false then
+					local specificFolder = lonersFolder:FindFirstChild(name)
+					if specificFolder then
+						for _, crateInstance in ipairs(specificFolder:GetChildren()) do
+							if crateInstance.Name == name then
+								local mainPart = crateInstance:FindFirstChild("Main") or crateInstance:FindFirstChildWhichIsA("BasePart")
+								if mainPart then
+									local pos = mainPart.Position
+									local prefix = "crate_" .. name:gsub(" ", ""):lower() .. "_"
+									local posKey = prefix .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
+									
+									if not drawings[posKey] then
+										drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = name, resourceClass = "Crate", config = configData }
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+
+		if dMaster and dropsFolder then
+			for _, child in ipairs(dropsFolder:GetChildren()) do
+				local targetPart = child:FindFirstChild("Main") or child:FindFirstChildWhichIsA("BasePart") or (child:IsA("BasePart") and child)
+				local pivotFallbackPos = nil
+				if not targetPart and child:IsA("Model") then
+					local success, pivot = pcall(function() return child:GetPivot() end)
+					if success and pivot then pivotFallbackPos = pivot.Position end
+				end
+				
+				local finalPos = targetPart and targetPart.Position or pivotFallbackPos
+				if finalPos then
+					local posKey = "drop_" .. math.floor(finalPos.X) .. "," .. math.floor(finalPos.Y) .. "," .. math.floor(finalPos.Z)
+					if not drawings[posKey] then
+						drawings[posKey] = { mainPart = targetPart, text = createText(), typeName = child.Name, resourceClass = "Drop", optionalPivotPos = pivotFallbackPos }
+					end
+				end
+			end
+		end
+
+		if aMaster and animalsFolder then
+			for _, child in ipairs(animalsFolder:GetChildren()) do
+				local config = animalConfig[child.Name]
+				if config and UI.GetValue(config.toggleKey) ~= false then
+					local detail = child:FindFirstChild("Detail")
+					local rootPart = detail and detail:FindFirstChild("RootPart")
+					local humanoid = child:FindFirstChildWhichIsA("Humanoid") or (detail and detail:FindFirstChildWhichIsA("Humanoid"))
+					
+					if rootPart and rootPart:IsA("BasePart") then
+						local fallbackID = tostring(child) .. "_" .. math.floor(rootPart.Position.X) .. "_" .. math.floor(rootPart.Position.Z)
+						local key = "animal_" .. fallbackID
+						if not drawings[key] then
+							drawings[key] = { mainPart = rootPart, modelInstance = child, text = createText(), typeName = child.Name, resourceClass = "Animal", humanoid = humanoid, config = config }
+						end
+					end
+				end
+			end
+		end
+
+		if npcMaster and miltaryFolder then
+			for _, locName in ipairs(locationList) do
+				if isLocationActive(locName) then
+					local locObj = miltaryFolder:FindFirstChild(locName)
+					if locObj then
+						for _, object in ipairs(locObj:GetChildren()) do
+							if object.Name == "Soldier" then
+								local headPart = object:FindFirstChild("Head")
+								local humanoid = object:FindFirstChildWhichIsA("Humanoid")
+								
+								if headPart then
+									local npcID = "npc_" .. tostring(object) .. "_" .. math.floor(headPart.Position.X)
+									if not drawings[npcID] then
+										drawings[npcID] = { 
+											mainPart = headPart, 
+											modelInstance = object,
+											text = createText(), 
+											typeName = "Soldier", 
+											resourceClass = "NPC", 
+											humanoid = humanoid, 
+											location = locName 
+										}
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		
+		if UI.GetValue("act_mod_alert") == true then
+			local namesFound = {}
+			local seen = {}
+			
+			for _, p in ipairs(Players:GetPlayers()) do
+				pcall(function()
+					local matched = false
+					local pId = tonumber(p.UserId) or 0
+					
+					if moderatorIds[pId] or moderatorNames[p.Name] or (p.DisplayName and moderatorNames[p.DisplayName]) then
+						matched = true
+					else
+						local lowerName = (p.Name or ""):lower()
+						local lowerDisplay = (p.DisplayName or ""):lower()
+						if lowerName:find("mod") or lowerName:find("admin") or lowerName:find("staff") or lowerDisplay:find("mod") or lowerDisplay:find("admin") or lowerDisplay:find("staff") then
+							matched = true
+						end
+					end
+					
+					if matched and not seen[p.Name] then
+						seen[p.Name] = true
+						table.insert(namesFound, p.Name)
+					end
+				end)
+			end
+			
+			pcall(function()
+				for _, obj in ipairs(workspace:GetChildren()) do
+					if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(obj) then
+						if moderatorNames[obj.Name] and not seen[obj.Name] then
+							seen[obj.Name] = true
+							table.insert(namesFound, obj.Name .. " (Ghost)")
+						end
+					end
+				end
+			end)
+			
+			if #namesFound > 0 then
+				blinkState = not blinkState
+				
+				if blinkState then
+					local fullText = "ACTIVE MOD: " .. table.concat(namesFound, ", ")
+					overlayText.Text = fullText
+					
+					local currentSize = UI.GetValue("script_text_size") or 16
+					overlayText.Size = currentSize + 2
+					
+					local viewportSize = Camera.ViewportSize
+					local textBoundsWidth = #fullText * (currentSize * 0.5)
+					
+					overlayText.Position = Vector2.new(viewportSize.X - textBoundsWidth - 25, 45)
+					overlayText.Visible = true
+				else
+					overlayText.Visible = false
+				end
+			else
+				overlayText.Visible = false
+			end
+		else
+			overlayText.Visible = false
+		end
+	end
+end)
+
+local lastRenderTime = 0
+
+RunService.RenderStepped:Connect(function()
+	local targetFPS = UI.GetValue("script_fps_target") or 60
+	local frameBudget = 1 / targetFPS
+	local currentTime = os.clock()
+	
+	if (currentTime - lastRenderTime) < frameBudget then
+		return
+	end
+	lastRenderTime = currentTime
+
+	local globalTextSize = UI.GetValue("script_text_size") or 16
+
+	local nMaster = UI.GetValue("node_enabled") or false
+	local nName   = UI.GetValue("node_name") or false
+	local nDist   = UI.GetValue("node_distance") or false
+	local nMaxC   = UI.GetValue("node_max_count") or 50
+	local nMaxD   = UI.GetValue("node_max_dist") or 300
+	
+	local pMaster = UI.GetValue("plant_enabled") or false
+	local pName   = UI.GetValue("plant_name") or false
+	local pDist   = UI.GetValue("plant_distance") or false
+	local pMaxC   = UI.GetValue("plant_max_count") or 50
+	local pMaxD   = UI.GetValue("plant_max_dist") or 300
+
+	local cMaster = UI.GetValue("crate_enabled") or false
+	local cName   = UI.GetValue("crate_name") or false
+	local cDist   = UI.GetValue("crate_distance") or false
+	local cMaxC   = UI.GetValue("crate_max_count") or 50
+	local cMaxD   = UI.GetValue("crate_max_dist") or 300
+
+	local dMaster = UI.GetValue("drop_enabled") or false
+	local dName   = UI.GetValue("drop_name") or false
+	local dDist   = UI.GetValue("drop_distance") or false
+	local dMaxC   = UI.GetValue("drop_max_count") or 40
+	local dMaxD   = UI.GetValue("drop_max_dist") or 250
+
+	local eMaster = UI.GetValue("extra_enabled") or false
+	local eName   = UI.GetValue("extra_name") or false
+	local eDist   = UI.GetValue("extra_distance") or false
+	local eMaxC   = UI.GetValue("extra_max_count") or 50
+	local eMaxD   = UI.GetValue("extra_max_dist") or 300
+
+	local aMaster = UI.GetValue("animal_enabled") or false
+	local aName   = UI.GetValue("animal_name") or false
+	local aHealth = UI.GetValue("animal_health") or false
+	local aDist   = UI.GetValue("animal_distance") or false
+	local aMaxD   = UI.GetValue("animal_max_dist") or 250
+
+	local npcMaster = UI.GetValue("npc_enabled") or false
+	local npcName    = UI.GetValue("npc_name") or false
+	local npcHealth = UI.GetValue("npc_health") or false
+	local npcDist   = UI.GetValue("npc_distance") or false
+	local npcMaxD   = UI.GetValue("npc_max_dist") or 1500
+	
+	local lp = Players.LocalPlayer
+	local character = lp.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart")
+	local hrpPos = hrp and hrp.Position
+	
+	local nodeRenderList   = {}
+	local plantRenderList  = {}
+	local crateRenderList  = {}
+	local dropRenderList   = {}
+	local extraRenderList  = {}
+	
+	for posKey, data in pairs(drawings) do
+		data.text.Size = globalTextSize
+		
+		if data.resourceClass == "Node" and not nMaster then data.text.Visible = false continue end
+		if data.resourceClass == "Plant" and not pMaster then data.text.Visible = false continue end
+		if data.resourceClass == "Crate" and not cMaster then data.text.Visible = false continue end
+		if data.resourceClass == "Drop" and not dMaster then data.text.Visible = false continue end
+		if data.resourceClass == "Extra" and not eMaster then data.text.Visible = false continue end
+		if data.resourceClass == "Animal" and not aMaster then data.text.Visible = false continue end
+		
+		if data.resourceClass == "NPC" then
+			if not npcMaster or not isLocationActive(data.location) then
+				data.text.Visible = false
+				continue
+			end
+		end
+
+		local hPos = data.mainPart and data.mainPart.Position or data.optionalPivotPos
+		
+		if hPos then
+			local studsDist = hrpPos and (hPos - hrpPos).Magnitude or 99999
+			local realMeters = studsDist * 0.28
+			
+			if data.resourceClass == "Node" then
+				if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= nMaxD then
+					table.insert(nodeRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = nName, distOpt = nDist })
+				else data.text.Visible = false end
+				
+			elseif data.resourceClass == "Plant" then
+				if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= pMaxD then
+					table.insert(plantRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = pName, distOpt = pDist })
+				else data.text.Visible = false end
+
+			elseif data.resourceClass == "Crate" then
+				if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= cMaxD then
+					table.insert(crateRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = cName, distOpt = cDist })
+				else data.text.Visible = false end
+
+			elseif data.resourceClass == "Drop" then
+				if realMeters <= dMaxD then
+					table.insert(dropRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = dName, distOpt = dDist })
+				else data.text.Visible = false end
+
+			elseif data.resourceClass == "Extra" then
+				if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= eMaxD then
+					table.insert(extraRenderList, { data = data, distance = realMeters, position = hPos, nameOpt = eName, distOpt = eDist })
+				else data.text.Visible = false end
+
+			elseif data.resourceClass == "Animal" then
+				if data.config and UI.GetValue(data.config.toggleKey) ~= false and realMeters <= aMaxD then
+					local pos, onScreen = WorldToScreen(hPos + Vector3.new(0, 4, 0))
+					
+					if onScreen and pos then
+						local elements = {}
+						if aName then table.insert(elements, data.config.label) end
+						if aHealth then table.insert(elements, string.format("(%d HP)", math.floor(data.humanoid and data.humanoid.Health or 100))) end
+						if aDist then table.insert(elements, string.format("[%dm]", math.floor(realMeters))) end
+						
+						local str = table.concat(elements, " ")
+						if str == "" then data.text.Visible = false else
+							data.text.Text = str
+							data.text.Color = getLiveColor(data.config.colorKey, data.config.r, data.config.g, data.config.b)
+							data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+							data.text.Visible = true
+						end
+					else data.text.Visible = false end
+				else data.text.Visible = false end
+
+			elseif data.resourceClass == "NPC" then
+				if realMeters <= npcMaxD then
+					local pos, onScreen = WorldToScreen(hPos + Vector3.new(0, 1.5, 0))
+					
+					if onScreen and pos then
+						local elements = {}
+						if npcName then table.insert(elements, "Soldier") end
+						if npcHealth then table.insert(elements, string.format("(%d HP)", math.floor(data.humanoid and data.humanoid.Health or 100))) end
+						if npcDist then table.insert(elements, string.format("[%dm]", math.floor(realMeters))) end
+						
+						local str = table.concat(elements, " ")
+						if str == "" then data.text.Visible = false else
+							data.text.Text = str
+							data.text.Color = getLiveColor("col_npc_esp", 1, 0.2, 0.2)
+							data.text.Position = Vector2.new(pos.X, pos.Y)
+							data.text.Visible = true
+						end
+					else data.text.Visible = false end
+				else data.text.Visible = false end
+			end
+		else 
+			data.text.Visible = false 
+		end
+	end
+	
+	if #nodeRenderList > 1 then table.sort(nodeRenderList, function(a, b) return a.distance < b.distance end) end
+	if #plantRenderList > 1 then table.sort(plantRenderList, function(a, b) return a.distance < b.distance end) end
+	if #crateRenderList > 1 then table.sort(crateRenderList, function(a, b) return a.distance < b.distance end) end
+	if #dropRenderList > 1 then table.sort(dropRenderList, function(a, b) return a.distance < b.distance end) end
+	if #extraRenderList > 1 then table.sort(extraRenderList, function(a, b) return a.distance < b.distance end) end
+	
+	for i, item in ipairs(nodeRenderList) do
+		if i <= nMaxC then
+			local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 5, 0))
+			if onScreen and pos then
+				local str = ""
+				if item.nameOpt then str = item.data.config.label end
+				if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
+				item.data.text.Text = str
+				item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
+				item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+				item.data.text.Visible = (str ~= "")
+			else item.data.text.Visible = false end
+		else item.data.text.Visible = false end
+	end
+	
+	for i, item in ipairs(plantRenderList) do
+		if i <= pMaxC then
+			local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 5, 0))
+			if onScreen and pos then
+				local str = ""
+				if item.nameOpt then str = item.data.config.label end
+				if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
+				item.data.text.Text = str
+				item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
+				item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+				item.data.text.Visible = (str ~= "")
+			else item.data.text.Visible = false end
+		else item.data.text.Visible = false end
+	end
+
+	for i, item in ipairs(crateRenderList) do
+		if i <= cMaxC then
+			local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 3, 0))
+			if onScreen and pos then
+				local str = ""
+				if item.nameOpt then str = item.data.config.label end
+				if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
+				item.data.text.Text = str
+				item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
+				item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+				item.data.text.Visible = (str ~= "")
+			else item.data.text.Visible = false end
+		else item.data.text.Visible = false end
+	end
+
+	for i, item in ipairs(dropRenderList) do
+		if i <= dMaxC then
+			local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 1, 0))
+			if onScreen and pos then
+				local str = ""
+				if item.nameOpt then str = item.data.typeName end
+				if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
+				item.data.text.Text = str
+				item.data.text.Color = getLiveColor("col_Drop", 240/255, 240/255, 240/255)
+				item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+				item.data.text.Visible = (str ~= "")
+			else item.data.text.Visible = false end
+		else item.data.text.Visible = false end
+	end
+
+	for i, item in ipairs(extraRenderList) do
+		if i <= eMaxC then
+			local pos, onScreen = WorldToScreen(item.position + Vector3.new(0, 3, 0))
+			if onScreen and pos then
+				local str = ""
+				if item.nameOpt then str = item.data.config.label end
+				if item.distOpt then str = (str ~= "" and str .. " [" or "[") .. math.floor(item.distance) .. "m" .. (item.nameOpt and "]" or "]") end
+				item.data.text.Text = str
+				item.data.text.Color = getLiveColor(item.data.config.colorKey, item.data.config.r, item.data.config.g, item.data.config.b)
+				item.data.text.Position = Vector2.new(pos.X, pos.Y - 10)
+				item.data.text.Visible = (str ~= "")
+			else item.data.text.Visible = false end
+		else item.data.text.Visible = false end
+	end
+end)
+
+print("Script fully loaded")
+print("I have not fully tested the script dm me if there is any problems @xkhr")
+print("Credit to Code.leak for the mod list")
