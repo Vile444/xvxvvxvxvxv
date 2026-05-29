@@ -116,13 +116,20 @@ local animalConfig = {
 	["PREFAB_ANIMAL_WOLF"]      = { toggleKey = "filter_Wolf", colorKey = "col_Wolf", label = "Wolf", r = 160/255, g = 160/255, b = 170/255 }
 }
 
+local bossConfig = {
+	["Bruno"] = { toggleKey = "filter_Boss_Bruno", colorKey = "col_Boss_Bruno", label = "Bruno", r = 255/255, g = 255/255, b = 255/255   },
+	["Brutus"] = { toggleKey = "filter_Boss_Brutus", colorKey = "col_Boss_Brutus", label = "Brutus", r = 255/255, g = 255/255,  b = 255/255   },
+	["Boris"] = { toggleKey = "filter_Boss_Boris", colorKey = "col_Boss_Boris", label = "Boris", r = 255/255, g = 255/255, b = 255/255   },
+	["BTR"] = { toggleKey = "filter_Boss_BTR", colorKey = "col_Boss_BTR", label = "BTR", r = 255/255, g = 255/255,  b = 255/255   }
+}
+
 local locationList = {
 	"Abandoned Bunker", "Military Airfield", "Military Base", "Military Barracks",
 	"Rocket Factory", "Industrial Port", "Cargo Yard", "Labs", "Submarine",
 	"ConvoyOne", "ConvoyTwo", "ConvoyThree", "ConvoyFour"
 }
 
-UI.AddTab("fallen", function(tab)
+UI.AddTab("Fallen", function(tab)
 	local sec = tab:Section("ESP Configurations", "Left", {"Nodes", "Plants", "Crates", "Drops", "Extra"}, 450)
 	
 	if sec.page == 0 then
@@ -146,7 +153,7 @@ UI.AddTab("fallen", function(tab)
 		sec:SliderInt("plant_max_count", "Max Plants", 1, 125, 50)
 		sec:SliderInt("plant_max_dist", "Max Distance", 0, 500, 300)
 		sec:Spacing()
-		sec:Text("Plants Filter & Colors:")
+		sec:Text("Plants Filter:")
 		for _, name in ipairs({"Wool Plant", "Corn Plant", "Lemon Plant", "Tomato Plant", "Pumpkin Plant", "Blueberry Plant", "Raspberry Plant"}) do
 			local config = plantConfig[name]
 			sec:Toggle(config.toggleKey, name, true)
@@ -158,7 +165,7 @@ UI.AddTab("fallen", function(tab)
 		sec:Toggle("crate_name", "Name ESP")
 		sec:Toggle("crate_distance", "Distance ESP")
 		sec:SliderInt("crate_max_count", "Max Crates", 1, 125, 50)
-		sec:SliderInt("crate_max_dist", "Max Distance", 0, 500, 300)
+		sec:SliderInt("crate_max_dist", "Max Distance", 0, 2500, 300)
 		sec:Spacing()
 		sec:Text("Crate Filters:")
 		for _, name in ipairs({"Food Crate", "Wooden Crate", "Locked Wooden Crate", "Locked Metal Crate", "Locked Steel Crate", "Timed Crate"}) do
@@ -231,7 +238,21 @@ UI.AddTab("fallen", function(tab)
 		end
 	end
 
-	local extraSec = tab:Section("Extra / Staff Alerts", "Right", nil, 220)
+	local eventSec = tab:Section("Events", "Right", nil, 360)
+	eventSec:Toggle("event_enabled", "Enabled")
+	eventSec:Toggle("event_name", "Name")
+	eventSec:Toggle("event_health", "Health")
+	eventSec:Toggle("event_distance", "Distance")
+	eventSec:SliderInt("event_max_dist", "Max Distance", 1, 5000, 2500)
+	eventSec:Spacing()
+	eventSec:Text("Event Filter:")
+	for _, bName in ipairs({"Bruno", "Brutus", "Boris", "BTR"}) do
+		local config = bossConfig[bName]
+		eventSec:Toggle(config.toggleKey, bName, true)
+		eventSec:ColorPicker(config.colorKey, config.r, config.g, config.b, 1)
+	end
+
+	local extraSec = tab:Section("Staff Alerts / Settings", "Right", nil, 220)
 	extraSec:Toggle("act_mod_alert", "Active Mod Alert", true)
 	extraSec:Text("Credit to code.leak for the mod list")
 	extraSec:SliderInt("script_text_size", "Text Size", 10, 32, 16)
@@ -286,6 +307,7 @@ task.spawn(function()
 		local eMaster = UI.GetValue("extra_enabled") or false
 		local aMaster = UI.GetValue("animal_enabled") or false
 		local npcMaster = UI.GetValue("npc_enabled") or false
+		local eventMaster = UI.GetValue("event_enabled") or false
 		
 		if not nMaster then wipeResourceClass("Node") end
 		if not pMaster then wipeResourceClass("Plant") end
@@ -294,17 +316,19 @@ task.spawn(function()
 		if not eMaster then wipeResourceClass("Extra") end
 		if not aMaster then wipeResourceClass("Animal") end
 		if not npcMaster then wipeResourceClass("NPC") end
+		if not eventMaster then wipeResourceClass("Event") end
 		
 		local nodesFolder   = workspace:FindFirstChild("Nodes")
 		local plantsFolder  = workspace:FindFirstChild("Plants")
 		local dropsFolder   = workspace:FindFirstChild("Drops")
 		local animalsFolder = workspace:FindFirstChild("Animals")
 		local miltaryFolder = workspace:FindFirstChild("Military")
+		local eventsFolder  = workspace:FindFirstChild("Events")
 		local basesFolder   = workspace:FindFirstChild("Bases")
 		local lonersFolder  = basesFolder and basesFolder:FindFirstChild("Loners")
 		
 		for posKey, data in pairs(drawings) do
-			if data.resourceClass == "Animal" or data.resourceClass == "NPC" then
+			if data.resourceClass == "Animal" or data.resourceClass == "NPC" or data.resourceClass == "Event" then
 				if not (data.modelInstance and data.modelInstance.Parent and data.mainPart and data.mainPart.Parent) then
 					pcall(function() data.text:Remove() end)
 					drawings[posKey] = nil
@@ -350,112 +374,42 @@ task.spawn(function()
 		end
 
 		if lonersFolder then
-			-- 1. Scan Sleepers Directly
-			local sleeperFolder = lonersFolder:FindFirstChild("Sleeper")
-			if sleeperFolder and eMaster and UI.GetValue(extraPageConfig["Sleeper"].toggleKey) ~= false then
-				for _, sleeperInstance in ipairs(sleeperFolder:GetChildren()) do
-					if sleeperInstance.Name == "Sleeper" then
-						local mainPart = sleeperInstance:FindFirstChild("Main")
-						if mainPart and mainPart:IsA("BasePart") then
-							local pos = mainPart.Position
-							local posKey = "extra_sleeper_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
-							if not drawings[posKey] then
-								drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = "Sleeper", resourceClass = "Extra", config = extraPageConfig["Sleeper"] }
-							end
-						end
-					end
-				end
-			end
-
-			local flycopterFolder = lonersFolder:FindFirstChild("Salvaged Flycopter")
-			if flycopterFolder and eMaster and UI.GetValue(extraPageConfig["Salvaged Flycopter"].toggleKey) ~= false then
-				for _, flycopterInstance in ipairs(flycopterFolder:GetChildren()) do
-					if flycopterInstance.Name == "Salvaged Flycopter" then
-						local mainPart = flycopterInstance:FindFirstChild("Main")
-						if mainPart and mainPart:IsA("BasePart") then
-							local pos = mainPart.Position
-							local posKey = "extra_flycopter_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
-							if not drawings[posKey] then
-								drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = "Salvaged Flycopter", resourceClass = "Extra", config = extraPageConfig["Salvaged Flycopter"] }
-							end
-						end
-					end
-				end
-			end
-
-			local woodenBoatFolder = lonersFolder:FindFirstChild("Wooden Boat")
-			if woodenBoatFolder and eMaster and UI.GetValue(extraPageConfig["Wooden Boat"].toggleKey) ~= false then
-				for _, boatInstance in ipairs(woodenBoatFolder:GetChildren()) do
-					if boatInstance.Name == "Wooden Boat" then
-						local mainPart = boatInstance:FindFirstChild("Main")
-						if mainPart and mainPart:IsA("BasePart") then
-							local pos = mainPart.Position
-							local posKey = "extra_woodenboat_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
-							if not drawings[posKey] then
-								drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = "Wooden Boat", resourceClass = "Extra", config = extraPageConfig["Wooden Boat"] }
-							end
-						end
-					end
-				end
-			end
-
-			local milBoatFolder = lonersFolder:FindFirstChild("Military Boat")
-			if milBoatFolder and eMaster and UI.GetValue(extraPageConfig["Military Boat"].toggleKey) ~= false then
-				for _, boatInstance in ipairs(milBoatFolder:GetChildren()) do
-					if boatInstance.Name == "Military Boat" then
-						local mainPart = boatInstance:FindFirstChild("Main")
-						if mainPart and mainPart:IsA("BasePart") then
-							local pos = mainPart.Position
-							local posKey = "extra_milboat_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
-							if not drawings[posKey] then
-								drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = "Military Boat", resourceClass = "Extra", config = extraPageConfig["Military Boat"] }
-							end
-						end
-					end
-				end
-			end
-
-			local carePackageFolder = lonersFolder:FindFirstChild("Care Package")
-			if carePackageFolder and cMaster and UI.GetValue(crateConfig["Care Package"].toggleKey) ~= false then
-				for _, packageInstance in ipairs(carePackageFolder:GetChildren()) do
-					if packageInstance.Name == "Care Package" then
-						local mainPart = packageInstance:FindFirstChild("Main") or packageInstance:FindFirstChildWhichIsA("BasePart")
-						local pivotFallbackPos = nil
-						if not mainPart and packageInstance:IsA("Model") then
-							local success, pivot = pcall(function() return packageInstance:GetPivot() end)
-							if success and pivot then pivotFallbackPos = pivot.Position end
-						end
+			for _, itemModel in ipairs(lonersFolder:GetChildren()) do
+				local name = itemModel.Name
+				
+				local isCrateTracked = crateConfig[name] and UI.GetValue(crateConfig[name].toggleKey) ~= false
+				local isExtraTracked = extraPageConfig[name] and UI.GetValue(extraPageConfig[name].toggleKey) ~= false
+				
+				if (cMaster and isCrateTracked) or (eMaster and isExtraTracked) then
+					local desc = itemModel:FindFirstChild("Main")
+					if desc and desc:IsA("BasePart") then
+						local pos = desc.Position
 						
-						local finalPos = mainPart and mainPart.Position or pivotFallbackPos
-						if finalPos then
-							local posKey = "crate_carepackage_" .. math.floor(finalPos.X) .. "," .. math.floor(finalPos.Y) .. "," .. math.floor(finalPos.Z)
+						if cMaster and crateConfig[name] then
+							local posKey = "crate_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
 							if not drawings[posKey] then
-								drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = "Care Package", resourceClass = "Crate", config = crateConfig["Care Package"], optionalPivotPos = pivotFallbackPos }
+								drawings[posKey] = { mainPart = desc, text = createText(), typeName = name, resourceClass = "Crate", config = crateConfig[name] }
+							end
+						elseif eMaster and extraPageConfig[name] then
+							local posKey = "extra_" .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
+							if not drawings[posKey] then
+								drawings[posKey] = { mainPart = desc, text = createText(), typeName = name, resourceClass = "Extra", config = extraPageConfig[name] }
 							end
 						end
 					end
-				end
-			end
-
-			local crateTypes = {"Food Crate", "Wooden Crate", "Locked Wooden Crate", "Locked Metal Crate", "Locked Steel Crate", "Timed Crate", "Trash Can", "Oil Barrel"}
-			for _, name in ipairs(crateTypes) do
-				local configData = crateConfig[name]
-				if configData and cMaster and UI.GetValue(configData.toggleKey) ~= false then
-					local specificFolder = lonersFolder:FindFirstChild(name)
-					if specificFolder then
-						for _, crateInstance in ipairs(specificFolder:GetChildren()) do
-							if crateInstance.Name == name then
-								local mainPart = crateInstance:FindFirstChild("Main") or crateInstance:FindFirstChildWhichIsA("BasePart")
-								if mainPart then
-									local pos = mainPart.Position
-									local prefix = "crate_" .. name:gsub(" ", ""):lower() .. "_"
-									local posKey = prefix .. math.floor(pos.X) .. "," .. math.floor(pos.Y) .. "," .. math.floor(pos.Z)
-									
-									if not drawings[posKey] then
-										drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = name, resourceClass = "Crate", config = configData }
-									end
-								end
-							end
+				elseif cMaster and name == "Care Package" and UI.GetValue(crateConfig["Care Package"].toggleKey) ~= false then
+					local mainPart = itemModel:FindFirstChild("Main") or itemModel:FindFirstChildWhichIsA("BasePart") or (itemModel:IsA("BasePart") and itemModel)
+					local pivotFallbackPos = nil
+					if not mainPart and itemModel:IsA("Model") then
+						local success, pivot = pcall(function() return itemModel:GetPivot() end)
+						if success and pivot then pivotFallbackPos = pivot.Position end
+					end
+					
+					local finalPos = mainPart and mainPart.Position or pivotFallbackPos
+					if finalPos then
+						local posKey = "crate_" .. math.floor(finalPos.X) .. "," .. math.floor(finalPos.Y) .. "," .. math.floor(finalPos.Z)
+						if not drawings[posKey] then
+							drawings[posKey] = { mainPart = mainPart, text = createText(), typeName = "Care Package", resourceClass = "Crate", config = crateConfig["Care Package"], optionalPivotPos = pivotFallbackPos }
 						end
 					end
 				end
@@ -525,6 +479,67 @@ task.spawn(function()
 									end
 								end
 							end
+						end
+					end
+				end
+			end
+		end
+
+		if eventMaster then
+			if UI.GetValue(bossConfig["Bruno"].toggleKey) ~= false and miltaryFolder then
+				local rfFolder = miltaryFolder:FindFirstChild("Rocket Factory")
+				local brunoObj = rfFolder and rfFolder:FindFirstChild("Bruno")
+				if brunoObj then
+					local headPart = brunoObj:FindFirstChild("Head")
+					local humanoid = brunoObj:FindFirstChildWhichIsA("Humanoid")
+					if headPart then
+						local bossKey = "event_bruno_" .. math.floor(headPart.Position.X)
+						if not drawings[bossKey] then
+							drawings[bossKey] = { mainPart = headPart, modelInstance = brunoObj, text = createText(), typeName = "Bruno", resourceClass = "Event", humanoid = humanoid, config = bossConfig["Bruno"] }
+						end
+					end
+				end
+			end
+
+			if UI.GetValue(bossConfig["Brutus"].toggleKey) ~= false and miltaryFolder then
+				local ipFolder = miltaryFolder:FindFirstChild("Industrial Port")
+				local brutusObj = ipFolder and ipFolder:FindFirstChild("Brutus")
+				if brutusObj then
+					local headPart = brutusObj:FindFirstChild("Head")
+					local humanoid = brutusObj:FindFirstChildWhichIsA("Humanoid")
+					if headPart then
+						local bossKey = "event_brutus_" .. math.floor(headPart.Position.X)
+						if not drawings[bossKey] then
+							drawings[bossKey] = { mainPart = headPart, modelInstance = brutusObj, text = createText(), typeName = "Brutus", resourceClass = "Event", humanoid = humanoid, config = bossConfig["Brutus"] }
+						end
+					end
+				end
+			end
+
+			if UI.GetValue(bossConfig["Boris"].toggleKey) ~= false and miltaryFolder then
+				local labsFolder = miltaryFolder:FindFirstChild("Labs")
+				local borisObj = labsFolder and labsFolder:FindFirstChild("Boris")
+				if borisObj then
+					local headPart = borisObj:FindFirstChild("Head")
+					local humanoid = borisObj:FindFirstChildWhichIsA("Humanoid")
+					if headPart then
+						local bossKey = "event_boris_" .. math.floor(headPart.Position.X)
+						if not drawings[bossKey] then
+							drawings[bossKey] = { mainPart = headPart, modelInstance = borisObj, text = createText(), typeName = "Boris", resourceClass = "Event", humanoid = humanoid, config = bossConfig["Boris"] }
+						end
+					end
+				end
+			end
+
+			if UI.GetValue(bossConfig["BTR"].toggleKey) ~= false and eventsFolder then
+				local btrObj = eventsFolder:FindFirstChild("BTR")
+				if btrObj then
+					local hrpPart = btrObj:FindFirstChild("HumanoidRootPart")
+					local humanoid = btrObj:FindFirstChildWhichIsA("Humanoid") or btrObj:FindFirstChild("Humanoid")
+					if hrpPart then
+						local bossKey = "event_btr_" .. math.floor(hrpPart.Position.X)
+						if not drawings[bossKey] then
+							drawings[bossKey] = { mainPart = hrpPart, modelInstance = btrObj, text = createText(), typeName = "BTR", resourceClass = "Event", humanoid = humanoid, config = bossConfig["BTR"] }
 						end
 					end
 				end
@@ -652,10 +667,16 @@ RunService.RenderStepped:Connect(function()
 	local aMaxD   = UI.GetValue("animal_max_dist") or 250
 
 	local npcMaster = UI.GetValue("npc_enabled") or false
-	local npcName    = UI.GetValue("npc_name") or false
+	local npcName   = UI.GetValue("npc_name") or false
 	local npcHealth = UI.GetValue("npc_health") or false
 	local npcDist   = UI.GetValue("npc_distance") or false
 	local npcMaxD   = UI.GetValue("npc_max_dist") or 1500
+
+	local eventMaster = UI.GetValue("event_enabled") or false
+	local eventName   = UI.GetValue("event_name") or false
+	local eventHealth = UI.GetValue("event_health") or false
+	local eventDist   = UI.GetValue("event_distance") or false
+	local eventMaxD   = UI.GetValue("event_max_dist") or 2500
 	
 	local lp = Players.LocalPlayer
 	local character = lp.Character
@@ -677,9 +698,11 @@ RunService.RenderStepped:Connect(function()
 		if data.resourceClass == "Drop" and not dMaster then data.text.Visible = false continue end
 		if data.resourceClass == "Extra" and not eMaster then data.text.Visible = false continue end
 		if data.resourceClass == "Animal" and not aMaster then data.text.Visible = false continue end
+		if data.resourceClass == "NPC" and not npcMaster then data.text.Visible = false continue end
+		if data.resourceClass == "Event" and not eventMaster then data.text.Visible = false continue end
 		
 		if data.resourceClass == "NPC" then
-			if not npcMaster or not isLocationActive(data.location) then
+			if not isLocationActive(data.location) then
 				data.text.Visible = false
 				continue
 			end
@@ -750,6 +773,27 @@ RunService.RenderStepped:Connect(function()
 						if str == "" then data.text.Visible = false else
 							data.text.Text = str
 							data.text.Color = getLiveColor("col_npc_esp", 1, 0.2, 0.2)
+							data.text.Position = Vector2.new(pos.X, pos.Y)
+							data.text.Visible = true
+						end
+					else data.text.Visible = false end
+				else data.text.Visible = false end
+
+			elseif data.resourceClass == "Event" then
+				if realMeters <= eventMaxD and data.config and UI.GetValue(data.config.toggleKey) ~= false then
+					local heightOffset = (data.typeName == "BTR") and Vector3.new(0, 5, 0) or Vector3.new(0, 1.5, 0)
+					local pos, onScreen = WorldToScreen(hPos + heightOffset)
+					
+					if onScreen and pos then
+						local elements = {}
+						if eventName then table.insert(elements, data.typeName) end
+						if eventHealth then table.insert(elements, string.format("(%d HP)", math.floor(data.humanoid and data.humanoid.Health or 100))) end
+						if eventDist then table.insert(elements, string.format("[%dm]", math.floor(realMeters))) end
+						
+						local str = table.concat(elements, " ")
+						if str == "" then data.text.Visible = false else
+							data.text.Text = str
+							data.text.Color = getLiveColor(data.config.colorKey, data.config.r, data.config.g, data.config.b)
 							data.text.Position = Vector2.new(pos.X, pos.Y)
 							data.text.Visible = true
 						end
