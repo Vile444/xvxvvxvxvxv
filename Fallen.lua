@@ -1,6 +1,50 @@
 -- Made with AI Credit to Code.leak for the mod list
 -- I havent tested for problems so dm me if theres any issues
 
+if type(Drawing) ~= "table" then
+    local CoreGui = game:GetService("CoreGui")
+    local drawingUI = Instance.new("ScreenGui")
+    drawingUI.Name = "MatchaDrawingPolyfill"
+    drawingUI.IgnoreGuiInset = true
+    
+    pcall(function() drawingUI.Parent = CoreGui end)
+    if not drawingUI.Parent then
+        drawingUI.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    end
+
+    getgenv().Drawing = {
+        Fonts = { System = Enum.Font.SourceSansBold },
+        new = function(className)
+            if className == "Text" then
+                local label = Instance.new("TextLabel")
+                label.BackgroundTransparency = 1
+                label.Visible = false
+                label.Parent = drawingUI
+                
+                local obj = {}
+                setmetatable(obj, {
+                    __newindex = function(_, k, v)
+                        if k == "Visible" then label.Visible = v
+                        elseif k == "Text" then label.Text = v
+                        elseif k == "Position" then label.Position = UDim2.new(0, v.X, 0, v.Y)
+                        elseif k == "Color" then label.TextColor3 = v
+                        elseif k == "Size" then label.TextSize = v
+                        elseif k == "Center" then label.AnchorPoint = v and Vector2.new(0.5, 0) or Vector2.new(0, 0)
+                        elseif k == "Outline" then label.TextStrokeTransparency = v and 0 or 1
+                        end
+                    end,
+                    __index = function(_, k)
+                        if k == "Remove" then
+                            return function() label:Destroy() end
+                        end
+                    end
+                })
+                return obj
+            end
+        end
+    }
+end
+
 if _G.OldDrawings then
 	for _, text in ipairs(_G.OldDrawings) do
 		pcall(function() text:Remove() end)
@@ -21,22 +65,22 @@ end
 
 local function getUniqueEntityId(instance)
 	if typeof(instance) ~= "Instance" then return tostring(instance) end
-
+	
 	if type(getaddress) == "function" then
 		local success, addr = pcall(function() return tostring(getaddress(instance)) end)
 		if success and addr and addr ~= "nil" then return addr end
 	end
-
+	
 	local successProp, addrProp = pcall(function() return tostring(instance.Address) end)
 	if successProp and addrProp and addrProp ~= "nil" then
 		return addrProp
 	end
-
+	
 	local successDebug, debugId = pcall(function() return instance:GetDebugId() end)
 	if successDebug and debugId and debugId ~= "" then
 		return debugId
 	end
-
+	
 	local attr = instance:GetAttribute("ESP_PTR")
 	if not attr then
 		attr = HttpService:GenerateGUID(false)
@@ -284,7 +328,7 @@ UI.AddTab("Fallen", function(tab)
 	local extraSec = tab:Section("Staff Alerts / Settings", "Right", nil, 220)
 	extraSec:Toggle("act_mod_alert", "Active Mod Alert", true)
 	extraSec:Text("Credit to code.leak for the mod list")
-	extraSec:SliderInt("script_text_size", "Text Size", 10, 32, 13)
+	extraSec:SliderInt("script_text_size", "Text Size", 10, 32, 16)
 	extraSec:SliderInt("script_fps_target", "Script Fps", 30, 240, 60)
 end)
 
@@ -357,24 +401,24 @@ task.spawn(function()
 		local lonersFolder  = basesFolder and basesFolder:FindFirstChild("Loners")
 
 		for key, data in pairs(drawings) do
+			local isAlive = false
 			pcall(function()
-				if data.modelInstance then
-					if not data.modelInstance.Parent then
-						if data.text then data.text:Remove() end
-						drawings[key] = nil
-					end
-				elseif data.mainPart then
-					if not data.mainPart.Parent then
-						if data.text then data.text:Remove() end
-						drawings[key] = nil
-					end
-				else
-					if not data.optionalPivotPos then
-						if data.text then data.text:Remove() end
-						drawings[key] = nil
-					end
+				if data.modelInstance and data.modelInstance.Parent ~= nil then
+					isAlive = true
+				elseif data.mainPart and data.mainPart.Parent ~= nil then
+					isAlive = true
+				elseif not data.modelInstance and not data.mainPart and data.optionalPivotPos then
+					isAlive = true
 				end
 			end)
+			
+			if not isAlive then
+				if data.text then 
+					data.text.Visible = false
+					data.text:Remove() 
+				end
+				drawings[key] = nil
+			end
 		end
 		
 		if nMaster and nodesFolder then
@@ -515,7 +559,7 @@ task.spawn(function()
 						if locObj then
 							for _, object in ipairs(locObj:GetChildren()) do
 								if object.Name == "Soldier" then
-									local headPart = object:FindFirstChild("Head")
+									local headPart = object:FindFirstChild("Head") or object:FindFirstChild("HumanoidRootPart") or object:FindFirstChildWhichIsA("BasePart")
 									local humanoid = object:FindFirstChildWhichIsA("Humanoid")
 									
 									if headPart then
@@ -548,7 +592,7 @@ task.spawn(function()
 					local barracksFolder = miltaryFolder:FindFirstChild("Military Barracks")
 					local brunoObj = (rfFolder and rfFolder:FindFirstChild("Bruno")) or (barracksFolder and barracksFolder:FindFirstChild("Bruno"))
 					if brunoObj then
-						local headPart = brunoObj:FindFirstChild("Head")
+						local headPart = brunoObj:FindFirstChild("Head") or brunoObj:FindFirstChildWhichIsA("BasePart")
 						local humanoid = brunoObj:FindFirstChildWhichIsA("Humanoid")
 						local addressKey = getUniqueEntityId(brunoObj)
 						if headPart and addressKey and not drawings[addressKey] then
@@ -561,7 +605,7 @@ task.spawn(function()
 					local ipFolder = miltaryFolder:FindFirstChild("Industrial Port")
 					local brutusObj = ipFolder and ipFolder:FindFirstChild("Brutus")
 					if brutusObj then
-						local headPart = brutusObj:FindFirstChild("Head")
+						local headPart = brutusObj:FindFirstChild("Head") or brutusObj:FindFirstChildWhichIsA("BasePart")
 						local humanoid = brutusObj:FindFirstChildWhichIsA("Humanoid")
 						local addressKey = getUniqueEntityId(brutusObj)
 						if headPart and addressKey and not drawings[addressKey] then
@@ -574,7 +618,7 @@ task.spawn(function()
 					local labsFolder = miltaryFolder:FindFirstChild("Labs")
 					local borisObj = labsFolder and labsFolder:FindFirstChild("Boris")
 					if borisObj then
-						local headPart = borisObj:FindFirstChild("Head")
+						local headPart = borisObj:FindFirstChild("Head") or borisObj:FindFirstChildWhichIsA("BasePart")
 						local humanoid = borisObj:FindFirstChildWhichIsA("Humanoid")
 						local addressKey = getUniqueEntityId(borisObj)
 						if headPart and addressKey and not drawings[addressKey] then
@@ -586,7 +630,7 @@ task.spawn(function()
 				if UI.GetValue(bossConfig["BTR"].toggleKey) ~= false and eventsFolder then
 					local btrObj = eventsFolder:FindFirstChild("BTR")
 					if btrObj then
-						local hrpPart = btrObj:FindFirstChild("HumanoidRootPart")
+						local hrpPart = btrObj:FindFirstChild("HumanoidRootPart") or btrObj:FindFirstChildWhichIsA("BasePart")
 						local humanoid = btrObj:FindFirstChildWhichIsA("Humanoid") or btrObj:FindFirstChild("Humanoid")
 						local addressKey = getUniqueEntityId(btrObj)
 						if hrpPart and addressKey and not drawings[addressKey] then
@@ -958,4 +1002,5 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
-print("Script fully loaded - enjoy! - Dm @xkhr if there is any issues or suggestions.")
+print("Script fully loaded - Enjoy!")
+print("NPC esp may have some issues dm me if you find any bugs")
