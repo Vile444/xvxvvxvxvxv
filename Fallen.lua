@@ -451,6 +451,11 @@ task.spawn(function()
 		local basesFolder   = workspace:FindFirstChild("Bases")
 		local lonersFolder  = basesFolder and basesFolder:FindFirstChild("Loners")
 
+        local hrpPos = nil
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            hrpPos = character.HumanoidRootPart.Position
+        end
+
 		for key, data in pairs(drawings) do
 			local isAlive = false
 			pcall(function()
@@ -461,6 +466,34 @@ task.spawn(function()
 				elseif not data.modelInstance and not data.mainPart and data.optionalPivotPos then
 					isAlive = true
 				end
+
+                if isAlive and data.config and data.config.toggleKey then
+                    if UI.GetValue(data.config.toggleKey) == false then
+                        isAlive = false
+                    end
+                end
+
+                if isAlive and hrpPos then
+                    local hPos = data.mainPart and data.mainPart.Position or data.optionalPivotPos
+                    if hPos then
+                        local dist = (hPos - hrpPos).Magnitude * 0.28
+                        local maxDist = 5000
+
+                        if data.resourceClass == "Node" then maxDist = UI.GetValue("node_max_dist") or 300
+                        elseif data.resourceClass == "Plant" then maxDist = UI.GetValue("plant_max_dist") or 300
+                        elseif data.resourceClass == "Crate" then maxDist = UI.GetValue("crate_max_dist") or 300
+                        elseif data.resourceClass == "Drop" then maxDist = UI.GetValue("drop_max_dist") or 250
+                        elseif data.resourceClass == "Extra" then maxDist = UI.GetValue("extra_max_dist") or 300
+                        elseif data.resourceClass == "Animal" then maxDist = UI.GetValue("animal_max_dist") or 250
+                        elseif data.resourceClass == "NPC" then maxDist = UI.GetValue("npc_max_dist") or 1500
+                        elseif data.resourceClass == "Event" then maxDist = UI.GetValue("event_max_dist") or 2500
+                        end
+
+                        if dist > (maxDist + 25) then
+                            isAlive = false
+                        end
+                    end
+                end
 			end)
 			
 			if not isAlive then
@@ -1076,5 +1109,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 print("Script fully loaded - enjoy!")
-print("Right now the script works but is prone to crashing after a while.")
-print("i cant work on a fix right now but i will when i can.")
+print("I have updated the script to be more performance efficient")
+print("I have not fully tested the script as i do not have the time to do so right now")
+print("If you find any bugs or encounter any crashes please dm me @xkhr")
+print("If you have any suggestions dm me or ping me. i will try work on notifyers when i can")
