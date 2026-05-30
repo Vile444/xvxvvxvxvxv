@@ -1076,4 +1076,5 @@ RunService.RenderStepped:Connect(function()
 end)
 
 print("Script fully loaded - enjoy!")
-print("This script is still very new, so you might experience some bugs or crashes. if you do please dm me @xkhr")
+print("Right now the script works but is prone to crashing after a while.")
+print("i cant work on a fix right now but i will when i can."
