@@ -1077,4 +1077,4 @@ end)
 
 print("Script fully loaded - enjoy!")
 print("Right now the script works but is prone to crashing after a while.")
-print("i cant work on a fix right now but i will when i can."
+print("i cant work on a fix right now but i will when i can.")
