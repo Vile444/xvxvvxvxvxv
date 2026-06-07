@@ -1140,5 +1140,7 @@ end)
 
 wait(0.5)
 notify("Fallen.lua - version 1.03", "enjoy!", 5)
-wait(1.5)
+wait(1)
 notify("This version is being tested you may encounter bugs.", "TESTING", 5)
+wait(1)
+notify("Esp might take a second to load.", "!", 5)
