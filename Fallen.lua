@@ -1,5 +1,4 @@
--- Made with AI
--- New mod list (Credit to code.leak for the old one)
+-- Made with Claude Code
 
 local CoreGui    = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
