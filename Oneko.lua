@@ -213,4 +213,4 @@ RunService.RenderStepped:Connect(function()
 	img.Position = Vector2.new(pos.X - size / 2, pos.Y - size / 2)
 end)
 
-notify("Oneko. Star the script >:(", "bleh", 4)
+notify("Oneko. Star the script >:(", "bleh", 6.7)
