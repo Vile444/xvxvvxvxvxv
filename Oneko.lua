@@ -2,20 +2,48 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local mouse = Players.LocalPlayer:GetMouse()
 
-local baseUrl = "https://raw.githubusercontent.com/Vile444/xvxvvxvxvxv/main/images/"
+local repo = "Vile444/xvxvvxvxvxv"
+
+local skin = "cat"
+if rawr ~= nil and rawr ~= "" then
+	skin = rawr
+end
+
+local baseUrl = "https://raw.githubusercontent.com/" .. repo .. "/main/images/" .. skin .. "/"
+local exts = { ".png", ".gif" }
 local size = 36
 local speed = 260
 local stopDist = 34
 
+print("loading " .. skin .. " please wait - arf arf geekin")
+
 local frames = {}
 local loading = {}
+local failedAt = {}
+local retryDelay = 3
 
 local function getFrame(n)
-	if frames[n] or loading[n] then return end
+	if frames[n] then return end
+	if loading[n] then return end
+	if failedAt[n] and os.clock() - failedAt[n] < retryDelay then return end
 	loading[n] = true
+
 	task.spawn(function()
-		local ok, data = pcall(game.HttpGet, game, baseUrl .. n .. ".gif")
-		if ok then frames[n] = data end
+		local gotIt = false
+		for i = 1, #exts do
+			local url = baseUrl .. n .. exts[i]
+			local ok, data = pcall(function()
+				return game:HttpGet(url)
+			end)
+			if ok and data and #data > 8 and (data:sub(1, 4) == "\137PNG" or data:sub(1, 3) == "GIF") then
+				frames[n] = data
+				gotIt = true
+				break
+			end
+		end
+		if not gotIt then
+			failedAt[n] = os.clock()
+		end
 		loading[n] = nil
 	end)
 end
@@ -28,23 +56,25 @@ local img = Drawing.new("Image")
 img.Visible = false
 img.ZIndex = 10
 
-local cur
+local currentFrame
 local function show(n)
-	if cur == n then return end
+	if currentFrame == n then return end
 	if not frames[n] then
 		getFrame(n)
 		return
 	end
-	if pcall(function() img.Data = frames[n] end) then
-		cur = n
+	local worked = pcall(function()
+		img.Data = frames[n]
+	end)
+	if worked then
+		currentFrame = n
 		img.Visible = true
 	end
 end
 
 local pos = Vector2.new(mouse.X, mouse.Y)
-local st = "sit"
-local timer, animT, flip = 0, 0, false
-local dirs = { { 1, 2 }, { 3, 4 }, { 5, 6 }, { 7, 8 }, { 9, 10 }, { 11, 12 }, { 13, 14 }, { 15, 16 } }
+local state = "sit"
+local timer, animTimer, flip = 0, 0, false
 local last = os.clock()
 
 RunService.RenderStepped:Connect(function()
@@ -53,63 +83,134 @@ RunService.RenderStepped:Connect(function()
 	last = now
 
 	local cam = workspace.CurrentCamera
-	local vp = cam and cam.ViewportSize
-	local mx, my = mouse.X, mouse.Y
-	if vp then
-		mx = math.clamp(mx, size / 2, vp.X - size / 2)
-		my = math.clamp(my, size / 2, vp.Y - size / 2)
+	local viewport = nil
+	if cam then
+		viewport = cam.ViewportSize
 	end
 
-	local dx, dy = mx - pos.X, my - pos.Y
+	local mouseX, mouseY = mouse.X, mouse.Y
+	if viewport then
+		mouseX = math.clamp(mouseX, size / 2, viewport.X - size / 2)
+		mouseY = math.clamp(mouseY, size / 2, viewport.Y - size / 2)
+	end
+
+	local dx, dy = mouseX - pos.X, mouseY - pos.Y
 	local dist = math.sqrt(dx * dx + dy * dy)
 	local moving = dist > stopDist
 
 	timer = timer + dt
-	animT = animT + dt
+	animTimer = animTimer + dt
 
 	if moving then
-		if st == "scratch" or st == "yawn" or st == "sleep" then
-			st, timer, animT = "wake", 0, 0
-		elseif st == "sit" then
-			st, timer = "walk", 0
+		if state == "scratch" or state == "yawn" or state == "sleep" then
+			state = "wake"
+			timer = 0
+			animTimer = 0
+		elseif state == "sit" then
+			state = "walk"
+			timer = 0
 		end
-	elseif st == "walk" or st == "wake" then
-		st, timer, animT = "sit", 0, 0
+	elseif state == "walk" or state == "wake" then
+		state = "sit"
+		timer = 0
+		animTimer = 0
 	end
 
-	if st == "wake" then
+	if state == "wake" then
 		show(32)
-		if timer > 0.25 then st, timer = "walk", 0 end
-	elseif st == "walk" then
+		if timer > 0.25 then
+			state = "walk"
+			timer = 0
+		end
+	elseif state == "walk" then
 		if dist > 0 then
 			local move = math.min(speed * dt, dist - stopDist + 1)
 			pos = Vector2.new(pos.X + dx / dist * move, pos.Y + dy / dist * move)
 		end
 
-		local ang = math.deg(math.atan2(dx, -dy))
-		if ang < 0 then ang = ang + 360 end
-		local pair = dirs[math.floor(ang / 45 + 0.5) % 8 + 1]
+		local angle = math.deg(math.atan2(dx, -dy))
+		if angle < 0 then
+			angle = angle + 360
+		end
 
-		if animT > 0.15 then animT, flip = 0, not flip end
-		show(flip and pair[2] or pair[1])
-	elseif st == "sit" then
-		if animT > 0.5 then animT, flip = 0, not flip end
-		show(flip and 25 or 31)
-		if timer > 4 then st, timer, animT = "scratch", 0, 0 end
-	elseif st == "scratch" then
-		if animT > 0.2 then animT, flip = 0, not flip end
-		show(flip and 28 or 27)
-		if timer > 1.2 then st, timer = "yawn", 0 end
-	elseif st == "yawn" then
+		local frameA, frameB
+		if angle < 22.5 or angle >= 337.5 then
+			frameA, frameB = 1, 2
+		elseif angle < 67.5 then
+			frameA, frameB = 3, 4
+		elseif angle < 112.5 then
+			frameA, frameB = 5, 6
+		elseif angle < 157.5 then
+			frameA, frameB = 7, 8
+		elseif angle < 202.5 then
+			frameA, frameB = 9, 10
+		elseif angle < 247.5 then
+			frameA, frameB = 11, 12
+		elseif angle < 292.5 then
+			frameA, frameB = 13, 14
+		else
+			frameA, frameB = 15, 16
+		end
+
+		if animTimer > 0.15 then
+			animTimer = 0
+			flip = not flip
+		end
+		if flip then
+			show(frameB)
+		else
+			show(frameA)
+		end
+	elseif state == "sit" then
+		if animTimer > 0.5 then
+			animTimer = 0
+			flip = not flip
+		end
+		if flip then
+			show(25)
+		else
+			show(31)
+		end
+		if timer > 4 then
+			state = "scratch"
+			timer = 0
+			animTimer = 0
+		end
+	elseif state == "scratch" then
+		if animTimer > 0.2 then
+			animTimer = 0
+			flip = not flip
+		end
+		if flip then
+			show(28)
+		else
+			show(27)
+		end
+		if timer > 1.2 then
+			state = "yawn"
+			timer = 0
+		end
+	elseif state == "yawn" then
 		show(26)
-		if timer > 1 then st, timer, animT = "sleep", 0, 0 end
-	elseif st == "sleep" then
-		if animT > 0.6 then animT, flip = 0, not flip end
-		show(flip and 30 or 29)
+		if timer > 1 then
+			state = "sleep"
+			timer = 0
+			animTimer = 0
+		end
+	elseif state == "sleep" then
+		if animTimer > 0.6 then
+			animTimer = 0
+			flip = not flip
+		end
+		if flip then
+			show(30)
+		else
+			show(29)
+		end
 	end
 
 	img.Size = Vector2.new(size, size)
 	img.Position = Vector2.new(pos.X - size / 2, pos.Y - size / 2)
 end)
 
-notify("OnekoCat", "meow", 4)
+notify("Oneko. Star the script >:(", "bleh", 4)
